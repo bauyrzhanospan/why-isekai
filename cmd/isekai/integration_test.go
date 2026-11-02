@@ -80,7 +80,7 @@ func newRepo(t *testing.T, withBinary bool) *repo {
 			env = append(env, kv)
 		}
 	}
-	path := os.Getenv("PATH")
+	path := cleanPath()
 	if withBinary {
 		path = binDir + string(os.PathListSeparator) + path
 	}
@@ -361,7 +361,7 @@ func TestFallbackWithoutBinary(t *testing.T) {
 	r2.env = nil
 	for _, kv := range r.env {
 		if strings.HasPrefix(strings.ToUpper(kv), "PATH=") {
-			kv = "PATH=" + os.Getenv("PATH")
+			kv = "PATH=" + cleanPath()
 		}
 		r2.env = append(r2.env, kv)
 	}
@@ -552,4 +552,22 @@ func mustRead(t *testing.T, p string) []byte {
 		t.Fatal(err)
 	}
 	return b
+}
+
+// cleanPath is PATH without directories that already contain an isekai
+// (a developer's install would hide the no-binary fallback).
+func cleanPath() string {
+	var keep []string
+	for _, d := range filepath.SplitList(os.Getenv("PATH")) {
+		found := false
+		for _, n := range []string{"isekai", "isekai.exe"} {
+			if _, err := os.Stat(filepath.Join(d, n)); err == nil {
+				found = true
+			}
+		}
+		if !found {
+			keep = append(keep, d)
+		}
+	}
+	return strings.Join(keep, string(os.PathListSeparator))
 }
