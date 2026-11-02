@@ -2,6 +2,7 @@ package journal
 
 import (
 	"fmt"
+	"regexp"
 	"os"
 	"strings"
 	"unicode"
@@ -72,6 +73,8 @@ func DetectAgent(m Message, cfg config.Config, env func(string) string) (bool, s
 // OSEnv is os.Getenv, for DetectAgent.
 var OSEnv = os.Getenv
 
+var whyInBodyRe = regexp.MustCompile(`(?im)^\s*why\s*:`)
+
 // fillerWords: a Why made only of these says nothing (spec §1.3.4).
 var fillerWords = map[string]bool{
 	"fix": true, "fixes": true, "fixed": true, "fixing": true, "bug": true, "bugfix": true,
@@ -132,6 +135,10 @@ func Check(m Message, cfg config.Config, env func(string) string) Result {
 	whys := m.Values(KeyWhy)
 	switch {
 	case len(whys) == 0:
+		if whyInBodyRe.MatchString(m.Body) {
+			add("why-not-trailer", Error, "`Why:` is in the body, not in the trailer block; put it in the last paragraph together with the other trailers, with no blank line between them")
+			return r
+		}
 		add("why-missing", Error, "missing `Why:` trailer")
 		return r
 	case len(whys) > 1:

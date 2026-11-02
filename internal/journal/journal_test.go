@@ -114,6 +114,7 @@ func TestCheckRules(t *testing.T) {
 		{"filler why", "feat: a\n\nWhy: various small fixes and updates\n", agent, "why-filler", true, false},
 		{"russian filler", "feat: a\n\nWhy: мелкие правки и исправления\n", agent, "why-filler", true, false},
 		{"repeats subject", "feat: add retry to the uploader\n\nWhy: add retry to the uploader\n", agent, "why-repeats-subject", true, false},
+		{"why in body", "feat: a\n\nWhy: separated from the other trailers\n\nAgent: x\n", nil, "why-not-trailer", true, false},
 		{"good", "feat: a\n\nWhy: uploads fail on flaky mobile networks\n", agent, "", true, false},
 		{"good russian", "feat: a\n\nWhy: загрузки падают в мобильных сетях\n", agent, "", true, false},
 		{"docs skipped", "docs: readme\n", agent, "", true, true},
