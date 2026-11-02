@@ -4,11 +4,18 @@ import (
 	"bytes"
 	"encoding/base64"
 	"encoding/hex"
+	"encoding/json"
 	"io"
+	"net/url"
 	"sort"
 	"strings"
 	"sync"
+	"time"
 )
+
+// IdleFlush: a held-back tail that might be the start of a secret is written
+// out after this much silence, so prompts like "Continue? [y/n" appear.
+const IdleFlush = 50 * time.Millisecond
 
 // MinMaskLen: shorter values are not masked (they would match everywhere);
 // `isekai run` warns about them instead.
@@ -30,6 +37,7 @@ type needle struct {
 type Masker struct {
 	needles []needle
 	maxLen  int
+	byFirst [256][]int // needle indexes by first byte, for the prefix scan
 }
 
 // NewMasker builds a masker for values keyed by reference string.
@@ -55,6 +63,11 @@ func NewMasker(values map[string]string) *Masker {
 			}
 			add(hex.EncodeToString([]byte(x)), ref)
 			add(strings.ToUpper(hex.EncodeToString([]byte(x))), ref)
+			if j, err := json.Marshal(x); err == nil {
+				add(string(j[1:len(j)-1]), ref) // JSON-escaped, e.g. inside a config dump
+			}
+			add(url.QueryEscape(x), ref)
+			add(url.PathEscape(x), ref)
 		}
 		if strings.Contains(v, "\n") {
 			for _, line := range strings.Split(v, "\n") {
@@ -67,10 +80,11 @@ func NewMasker(values map[string]string) *Masker {
 	}
 	// Longest first so a full value wins over one of its lines.
 	sort.Slice(m.needles, func(i, j int) bool { return len(m.needles[i].b) > len(m.needles[j].b) })
-	for _, n := range m.needles {
+	for i, n := range m.needles {
 		if len(n.b) > m.maxLen {
 			m.maxLen = len(n.b)
 		}
+		m.byFirst[n.b[0]] = append(m.byFirst[n.b[0]], i)
 	}
 	return m
 }
@@ -90,25 +104,53 @@ func (m *Masker) String(s string) string {
 }
 
 type maskWriter struct {
-	mu  sync.Mutex
-	m   *Masker
-	w   io.Writer
-	buf []byte
+	mu    sync.Mutex
+	m     *Masker
+	w     io.Writer
+	buf   []byte
+	timer *time.Timer
+	err   error
 }
 
 func (mw *maskWriter) Write(p []byte) (int, error) {
 	mw.mu.Lock()
 	defer mw.mu.Unlock()
+	if mw.err != nil {
+		return 0, mw.err
+	}
 	mw.buf = append(mw.buf, p...)
 	if err := mw.drain(false); err != nil {
 		return 0, err
 	}
+	if len(mw.buf) > 0 {
+		if mw.timer == nil {
+			mw.timer = time.AfterFunc(IdleFlush, mw.idle)
+		} else {
+			mw.timer.Reset(IdleFlush)
+		}
+	}
 	return len(p), nil
+}
+
+// idle flushes a held tail after a pause in output. At worst this shows the
+// first bytes of a value that never got completed.
+func (mw *maskWriter) idle() {
+	mw.mu.Lock()
+	defer mw.mu.Unlock()
+	if len(mw.buf) > 0 && mw.err == nil {
+		mw.err = mw.drain(true)
+	}
 }
 
 func (mw *maskWriter) Close() error {
 	mw.mu.Lock()
 	defer mw.mu.Unlock()
+	if mw.timer != nil {
+		mw.timer.Stop()
+	}
+	if mw.err != nil {
+		return mw.err
+	}
 	return mw.drain(true)
 }
 
@@ -156,8 +198,9 @@ func (mw *maskWriter) drain(final bool) error {
 }
 
 func (mw *maskWriter) isPrefix(tail []byte) bool {
-	for _, n := range mw.m.needles {
-		if len(tail) < len(n.b) && bytes.HasPrefix(n.b, tail) {
+	for _, i := range mw.m.byFirst[tail[0]] {
+		n := mw.m.needles[i].b
+		if len(tail) < len(n) && bytes.HasPrefix(n, tail) {
 			return true
 		}
 	}

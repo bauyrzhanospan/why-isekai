@@ -129,12 +129,27 @@ agent = ["*/*", "!prod/*"]                  # agents get everything except prod
 func (c Config) Allowed(ref Ref, agentName string) bool {
 	key := ref.Key()
 	if agentName != "" {
-		if match(c.Access["agent:"+agentName], key) {
+		named := c.Access["agent:"+agentName]
+		if excluded(named, key) {
+			return false
+		}
+		if match(named, key) {
 			return true
 		}
 		return match(c.Access["agent"], key)
 	}
 	return match(c.Access["human"], key)
+}
+
+func excluded(rules []string, key string) bool {
+	for _, p := range rules {
+		if strings.HasPrefix(p, "!") {
+			if ok, _ := path.Match(strings.TrimPrefix(p, "!"), key); ok {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func match(rules []string, key string) bool {

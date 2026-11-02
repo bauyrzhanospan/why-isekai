@@ -6,7 +6,9 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
+	"time"
 )
 
 func TestParseRef(t *testing.T) {
@@ -120,5 +122,36 @@ func TestAgeStoreRoundTrip(t *testing.T) {
 	t.Setenv("AppData", t.TempDir())
 	if _, err := st.Get("dev/db"); err == nil || !strings.Contains(err.Error(), "no decryption key") {
 		t.Fatalf("err = %v", err)
+	}
+}
+
+func TestMaskerIdleFlushAndEncodings(t *testing.T) {
+	m := NewMasker(map[string]string{"secret://x/y": `nopq"rstuvw`})
+	var mu sync.Mutex
+	var b bytes.Buffer
+	w := m.Writer(writerFunc(func(p []byte) (int, error) { mu.Lock(); defer mu.Unlock(); return b.Write(p) }))
+	w.Write([]byte("Continue? [y/n"))
+	time.Sleep(4 * IdleFlush)
+	mu.Lock()
+	got := b.String()
+	mu.Unlock()
+	if got != "Continue? [y/n" {
+		t.Fatalf("held tail not flushed: %q", got)
+	}
+	w.Write([]byte(` cfg={"pw":"nopq\"rstuvw"}`))
+	w.Close()
+	if strings.Contains(b.String(), "rstuvw") {
+		t.Fatalf("json-escaped value leaked: %q", b.String())
+	}
+}
+
+type writerFunc func([]byte) (int, error)
+
+func (f writerFunc) Write(p []byte) (int, error) { return f(p) }
+
+func TestNamedAgentExclusion(t *testing.T) {
+	c := Config{Access: map[string][]string{"agent": {"*/*"}, "agent:bot": {"!dev/x"}}}
+	if c.Allowed(Ref{"dev", "x"}, "bot") || !c.Allowed(Ref{"dev", "y"}, "bot") || !c.Allowed(Ref{"dev", "x"}, "other") {
+		t.Fatal("named exclusion")
 	}
 }

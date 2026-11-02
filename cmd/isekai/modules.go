@@ -89,12 +89,17 @@ func cmdSecrets(args []string, stdin io.Reader, out io.Writer) error {
 			if err != nil {
 				continue
 			}
-			if c.Allowed(r, who) {
+			switch {
+			case who != "" && c.Allowed(r, who):
 				fmt.Fprintln(out, r.String())
-			} else if who == "" {
-				fmt.Fprintln(out, r.String(), "(agents: denied)")
-			} else {
+			case who != "":
 				hidden++
+			case !c.Allowed(r, ""):
+				fmt.Fprintln(out, r.String(), "(humans: denied)")
+			case !c.Allowed(r, "agent"):
+				fmt.Fprintln(out, r.String(), "(agents: denied)")
+			default:
+				fmt.Fprintln(out, r.String())
 			}
 		}
 		if hidden > 0 {

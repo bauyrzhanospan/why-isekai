@@ -9,6 +9,7 @@ import (
 	"os/signal"
 	"sort"
 	"strings"
+	"time"
 )
 
 // RunOptions for Run.
@@ -144,6 +145,8 @@ func Run(argv []string, o RunOptions) (int, error) {
 	cmd.Stdin = o.Stdin
 	cmd.Stdout = out
 	cmd.Stderr = errw
+	// A background grandchild may keep our output pipe open; do not wait for it.
+	cmd.WaitDelay = 2 * time.Second
 	// Let the child handle Ctrl-C; we just wait for it.
 	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, os.Interrupt)
@@ -154,11 +157,10 @@ func Run(argv []string, o RunOptions) (int, error) {
 	if runErr != nil {
 		var ee *exec.ExitError
 		if errors.As(runErr, &ee) {
-			code := ee.ExitCode()
-			if code < 0 {
-				code = 1
-			}
-			return code, nil
+			return exitCode(ee), nil
+		}
+		if errors.Is(runErr, exec.ErrWaitDelay) {
+			return 0, nil
 		}
 		return 1, fmt.Errorf("run: %s", m.String(runErr.Error()))
 	}
