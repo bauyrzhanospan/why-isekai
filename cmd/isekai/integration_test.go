@@ -12,6 +12,7 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/bauyrzhanospan/why-isekai/internal/config"
 )
@@ -570,4 +571,69 @@ func cleanPath() string {
 		}
 	}
 	return strings.Join(keep, string(os.PathListSeparator))
+}
+
+func TestHookWithSetE(t *testing.T) {
+	r := newRepo(t, true)
+	hooks := filepath.Join(r.dir, ".git", "hooks")
+	os.MkdirAll(hooks, 0o755)
+	os.WriteFile(filepath.Join(hooks, "commit-msg"), []byte("#!/bin/sh -e\ntrue\n"), 0o755)
+	r.mustInit()
+	// isekai off PATH: the fallback must not die on a failing substitution.
+	var env []string
+	for _, kv := range r.env {
+		if strings.HasPrefix(strings.ToUpper(kv), "PATH=") {
+			kv = "PATH=" + cleanPath()
+		}
+		env = append(env, kv)
+	}
+	r.env = env
+	if out, code := r.commit("feat: a\n\nWhy: set -e hooks must keep working without the binary"); code != 0 {
+		t.Fatalf("code %d:\n%s", code, out)
+	}
+}
+
+func TestSymlinkedHookIsChained(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("symlinks")
+	}
+	r := newRepo(t, true)
+	r.write("scripts/commit-msg", "#!/bin/sh\necho tracked-ran >> \"$(git rev-parse --git-dir)/tracked.log\"\n")
+	os.Chmod(filepath.Join(r.dir, "scripts/commit-msg"), 0o755)
+	hooks := filepath.Join(r.dir, ".git", "hooks")
+	os.MkdirAll(hooks, 0o755)
+	os.Symlink(filepath.Join(r.dir, "scripts/commit-msg"), filepath.Join(hooks, "commit-msg"))
+	r.mustInit()
+	if strings.Contains(string(mustRead(t, filepath.Join(r.dir, "scripts/commit-msg"))), "isekai") {
+		t.Fatal("tracked hook file was modified")
+	}
+	r.commit("feat: a\n\nWhy: the tracked hook must still run through the chain")
+	if !strings.Contains(string(mustRead(t, filepath.Join(r.dir, ".git", "tracked.log"))), "tracked-ran") {
+		t.Fatal("chained symlink hook did not run")
+	}
+}
+
+func TestHashLineAfterTrailersWithDashM(t *testing.T) {
+	r := newRepo(t, true)
+	r.mustInit("--mode", "block")
+	r.agent = true
+	if out, code := r.commit("feat: c\n\nWhy: hook and git log must agree on comment-like lines\n\n#42"); code != 0 {
+		t.Fatalf("rejected:\n%s", out)
+	}
+	out, _ := r.isekai("check", "--strict")
+	if !strings.Contains(out, "0 with problems") {
+		t.Fatalf("check disagrees with hook:\n%s", out)
+	}
+}
+
+func TestRunDoesNotWaitForBackgroundChild(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("uses sh")
+	}
+	r := newRepo(t, true)
+	start := time.Now()
+	out, code := r.isekai("run", "--", "sh", "-c", "sleep 8 & echo started")
+	if code != 0 || !strings.Contains(out, "started") || time.Since(start) > 6*time.Second {
+		t.Fatalf("code %d after %v:\n%s", code, time.Since(start), out)
+	}
 }
