@@ -36,30 +36,33 @@ const installHint = `npx why-isekai --help | pip install why-isekai | brew insta
 // the Why trailer when isekai is not on PATH, so the journal keeps working
 // with nothing but git (handoff §5).
 const commitMsgBlock = beginMarker + ` managed by "isekai init"; edit outside this block
-_isekai=$(command -v isekai 2>/dev/null)
-for _c in node_modules/.bin/isekai .venv/bin/isekai venv/bin/isekai; do
+_isekai=$(command -v isekai 2>/dev/null || true)
+for _c in node_modules/.bin/isekai .venv/bin/isekai venv/bin/isekai .venv/Scripts/isekai.exe venv/Scripts/isekai.exe; do
   if [ -z "$_isekai" ] && [ -x "$_c" ]; then _isekai=$_c; fi
 done
 if [ -n "$_isekai" ]; then
   "$_isekai" hook commit-msg "$@" || exit $?
 else
   isekai_basic_check() {
-    _msg=$(sed -e '/^# -\{24\} >8 -\{24\}$/,$d' "$1" | grep -v '^#')
-    _subject=$(printf '%s\n' "$_msg" | sed -n '/[^[:space:]]/{p;q;}')
+    _cc=$(git config core.commentChar 2>/dev/null || true)
+    case "$_cc" in ''|auto) _cc='#' ;; esac
+    _msg=$(sed -e '/^. -\{24\} >8 -\{24\}$/,$d' "$1" | grep -v "^[$_cc]" || true)
+    _subject=$(printf '%s\n' "$_msg" | sed -n '/[^[:space:]]/{p;q;}' || true)
     case "$_subject" in
       ''|'Merge '*|'fixup! '*|'squash! '*|'amend! '*|'Revert "'*) return 0 ;;
     esac
-    _type=$(printf '%s\n' "$_subject" | sed -n 's/^\([A-Za-z]*\)\(([^)]*)\)\{0,1\}!\{0,1\}:.*/\1/p' | tr 'A-Z' 'a-z')
+    _type=$(printf '%s\n' "$_subject" | sed -n 's/^\([A-Za-z]*\)\(([^)]*)\)\{0,1\}!\{0,1\}:.*/\1/p' | tr 'A-Z' 'a-z' || true)
     case "$_type" in style|docs|ci) return 0 ;; esac
-    _why=$(printf '%s\n' "$_msg" | sed -n 's/^[Ww][Hh][Yy][[:space:]]*:[[:space:]]*//p' | sed -n '1p')
+    _why=$(printf '%s\n' "$_msg" | sed -n 's/^[Ww][Hh][Yy][[:space:]]*:[[:space:]]*//p' | sed -n '1p' || true)
     _agent=0
     if printf '%s\n' "$_msg" | grep -Eqi '^(agent[[:space:]]*:|co-authored-by:.*(anthropic|claude|codex|openai|cursor|copilot|aider|devin|gemini|opencode|cline))'; then _agent=1; fi
-    for _v in "${ISEKAI_AGENT:-}" "${AI_AGENT:-}" "${CLAUDECODE:-}" "${CODEX_CI:-}" "${CODEX_THREAD_ID:-}" "${CURSOR_AGENT:-}" "${CLINE_ACTIVE:-}" "${OPENCODE:-}" "${GEMINI_CLI:-}" "${COPILOT_AGENT:-}"; do
-      case "$_v" in ''|0|false) ;; *) _agent=1 ;; esac
+    for _v in "${ISEKAI_AGENT:-}" "${AI_AGENT:-}" "${CLAUDECODE:-}" "${CODEX_CI:-}" "${CODEX_THREAD_ID:-}" "${CODEX_SANDBOX:-}" "${CURSOR_AGENT:-}" "${CLINE_ACTIVE:-}" "${OPENCODE:-}" "${GEMINI_CLI:-}" "${QWEN_CODE:-}" "${COPILOT_AGENT:-}" "${AUGMENT_AGENT:-}" "${ANTIGRAVITY_AGENT:-}" "${KIRO_SESSION_ID:-}" "${TABNINE_CLI:-}" "${GOOSE_TERMINAL:-}"; do
+      case "$_v" in ''|0|false|FALSE|False) ;; *) _agent=1 ;; esac
     done
+    case "${AGENT:-}" in amp|goose|1) _agent=1 ;; esac
     _mode=warn
     if [ -f .isekai/config.toml ] && grep -Eq '^[[:space:]]*mode[[:space:]]*=[[:space:]]*"block"' .isekai/config.toml; then _mode=block; fi
-    [ -n "${ISEKAI_MODE:-}" ] && _mode=$ISEKAI_MODE
+    if [ -n "${ISEKAI_MODE:-}" ]; then _mode=$(printf '%s' "$ISEKAI_MODE" | tr 'A-Z' 'a-z'); fi
     if [ -z "$_why" ]; then _problem='missing "Why:" trailer'
     elif [ "${#_why}" -lt 15 ]; then _problem='"Why:" is too short to explain the reason'
     else return 0; fi
@@ -78,15 +81,16 @@ fi
 ` + endMarker + "\n"
 
 const prepareMsgBlock = beginMarker + ` managed by "isekai init"; edit outside this block
-_isekai=$(command -v isekai 2>/dev/null)
-for _c in node_modules/.bin/isekai .venv/bin/isekai venv/bin/isekai; do
+_isekai=$(command -v isekai 2>/dev/null || true)
+for _c in node_modules/.bin/isekai .venv/bin/isekai venv/bin/isekai .venv/Scripts/isekai.exe venv/Scripts/isekai.exe; do
   if [ -z "$_isekai" ] && [ -x "$_c" ]; then _isekai=$_c; fi
 done
 if [ -n "$_isekai" ]; then
   "$_isekai" hook prepare-commit-msg "$@" || true
 else
-  case "${2:-}" in
-    ''|template) printf '\n# isekai: end the message with "Why: <reason>" (optional: Tried, Next, Done, Agent).\n' >> "$1" ;;
+  _cc=$(git config core.commentChar 2>/dev/null || true)
+  case "${2:-}:$_cc" in
+    :|template:|:'#'|template:'#') printf '\n# isekai: end the message with "Why: <reason>" (optional: Tried, Next, Done, Agent).\n' >> "$1" ;;
   esac
 fi
 ` + endMarker + "\n"
@@ -137,6 +141,10 @@ func InstallHook(path, block string) (Action, error) {
 	if err != nil {
 		return "", err
 	}
+	if st, err := os.Lstat(path); err == nil && st.Mode()&os.ModeSymlink != 0 {
+		// Writing would modify the link target (often a tracked file).
+		return chain(path, block)
+	}
 	s := strings.ReplaceAll(string(data), "\r\n", "\n")
 
 	// Already ours: refresh the block in place.
@@ -165,17 +173,21 @@ func InstallHook(path, block string) (Action, error) {
 		return Inserted, writeExec(path, "#!/bin/sh\n"+block+s)
 	default:
 		// Python, node, etc.: move it aside and call it after our block.
-		chained := path + ChainSuffix
-		if _, err := os.Stat(chained); err == nil {
-			return "", fmt.Errorf("%s exists; remove it or merge the hooks by hand", chained)
-		}
-		if err := os.Rename(path, chained); err != nil {
-			return "", err
-		}
-		name := filepath.Base(chained)
-		wrapper := "#!/bin/sh\n" + block + `exec "$(dirname "$0")/` + name + `" "$@"` + "\n"
-		return Chained, writeExec(path, wrapper)
+		return chain(path, block)
 	}
+}
+
+func chain(path, block string) (Action, error) {
+	chained := path + ChainSuffix
+	if _, err := os.Lstat(chained); err == nil {
+		return "", fmt.Errorf("%s exists; remove it or merge the hooks by hand", chained)
+	}
+	if err := os.Rename(path, chained); err != nil {
+		return "", err
+	}
+	name := filepath.Base(chained)
+	wrapper := "#!/bin/sh\n" + block + `exec "$(dirname "$0")/` + name + `" "$@"` + "\n"
+	return Chained, writeExec(path, wrapper)
 }
 
 func writeExec(path, content string) error {
