@@ -4,7 +4,7 @@
       {
         "hooks": [
           {
-            "command": "isekai hook claude-guard",
+            "command": "if command -v isekai >/dev/null 2>&1; then isekai hook claude-guard; fi",
             "type": "command"
           }
         ],

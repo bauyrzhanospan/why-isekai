@@ -133,7 +133,18 @@ func ensureAgentsLine(path string) (Action, error) {
 // Claude Code hook commands.
 const (
 	ClaudeBriefCmd = "isekai brief --format md 2>/dev/null || true"
-	ClaudeGuardCmd = "isekai hook claude-guard"
+	// Only exit code 2 blocks a tool call; a missing isekai must not break the agent.
+	ClaudeGuardCmd = "if command -v isekai >/dev/null 2>&1; then isekai hook claude-guard; fi"
+)
+
+// markers identify our hook commands when merging settings.
+var claudeMarkers = map[string]string{
+	ClaudeBriefCmd: "isekai brief",
+	ClaudeGuardCmd: "isekai hook claude-guard",
+}
+
+const (
+	_ = iota
 )
 
 // ensureClaudeSettings registers a SessionStart hook that feeds `isekai
@@ -163,7 +174,7 @@ func ensureClaudeSettings(path string) (Action, error) {
 			hs, _ := gm["hooks"].([]any)
 			for _, h := range hs {
 				hm, _ := h.(map[string]any)
-				if c, _ := hm["command"].(string); strings.Contains(c, strings.Fields(command)[1]+" "+strings.Fields(command)[2]) {
+				if c, _ := hm["command"].(string); strings.Contains(c, claudeMarkers[command]) {
 					return
 				}
 			}
