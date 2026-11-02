@@ -109,7 +109,10 @@ export function build({ version, dist, out, platforms = PLATFORMS }) {
 function publish(out) {
   const dirs = fs.readdirSync(out).sort((a, b) => (a === MAIN) - (b === MAIN)); // platforms first
   for (const d of dirs) {
-    const r = spawnSync("npm", ["publish", "--access", "public", "--provenance"], { cwd: path.join(out, d), stdio: "inherit" });
+    const { version } = JSON.parse(fs.readFileSync(path.join(out, d, "package.json"), "utf8"));
+    // Pre-releases (0.2.0-rc.1) must not become "latest".
+    const tag = version.includes("-") ? ["--tag", "next"] : [];
+    const r = spawnSync("npm", ["publish", "--access", "public", "--provenance", ...tag], { cwd: path.join(out, d), stdio: "inherit" });
     if (r.status !== 0) process.exit(r.status ?? 1);
   }
 }

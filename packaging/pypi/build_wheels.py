@@ -17,6 +17,7 @@ import hashlib
 import io
 import os
 import platform
+import re
 import shutil
 import subprocess
 import sys
@@ -81,6 +82,19 @@ def main() -> None:
 if __name__ == "__main__":
     main()
 '''
+
+
+def pep440(version: str) -> str:
+    """Turn a semver tag (0.1.0-rc.1, 0.2.0-beta.2) into a PEP 440 version (0.1.0rc1, 0.2.0b2)."""
+    v = version.lstrip("v")
+    m = re.fullmatch(r"(\d+\.\d+\.\d+)(?:-(alpha|a|beta|b|rc|pre|dev)\.?(\d*))?", v)
+    if not m:
+        raise SystemExit(f"version {version!r} cannot be expressed in PEP 440; use X.Y.Z or X.Y.Z-rc.N")
+    base, kind, num = m.group(1), m.group(2), m.group(3) or "0"
+    if not kind:
+        return base
+    tag = {"alpha": "a", "a": "a", "beta": "b", "b": "b", "rc": "rc", "pre": "rc", "dev": ".dev"}[kind]
+    return f"{base}{tag}{num}"
 
 
 def record_line(path: str, data: bytes) -> str:
@@ -160,7 +174,7 @@ def build_all(version: str, dist: str, out: str, only=None) -> list:
         archive = os.path.join(dist, f"isekai_{version}_{goos}_{goarch}.{ext}")
         if not os.path.exists(archive):
             raise SystemExit(f"missing {archive}")
-        wheels.append(build_wheel(version, read_binary(archive, exe), exe, tag, out))
+        wheels.append(build_wheel(pep440(version), read_binary(archive, exe), exe, tag, out))
     return wheels
 
 
@@ -198,6 +212,7 @@ def main() -> None:
     ap.add_argument("--self-test", action="store_true")
     a = ap.parse_args()
     if a.self_test:
+        assert pep440("0.1.0") == "0.1.0" and pep440("v0.1.0-rc.1") == "0.1.0rc1" and pep440("1.2.3-beta.2") == "1.2.3b2"
         self_test()
         return
     if not a.version:
