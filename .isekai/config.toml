@@ -1,0 +1,23 @@
+# why-isekai config. Spec: https://github.com/bauyrzhanospan/why-isekai/blob/main/SPEC.md
+# All keys are optional; the values below are the defaults.
+
+[log]
+# warn: print problems, never reject. block: reject agent commits that break the spec.
+# Human commits only ever get warnings. Env ISEKAI_MODE overrides this.
+mode = "block"
+# Conventional Commit types that do not need a Why trailer.
+skip_types = ["style", "docs", "ci"]
+min_why_len = 15
+max_value_len = 200
+# isekai brief: how many recent commits to summarise, how far back to look for open Next items.
+brief_commits = 20
+scan_commits = 2000
+# Open Next items older than this are flagged as possibly stale.
+stale_next_days = 30
+
+[agents]
+# Env vars that mark the committer as an agent: "NAME" = set and not "0"/"false";
+# "NAME=a|b" = only these values. Add your agent's variable here.
+env = ["ISEKAI_AGENT", "AI_AGENT", "CLAUDECODE", "CODEX_CI", "CODEX_THREAD_ID", "CODEX_SANDBOX", "CURSOR_AGENT", "CLINE_ACTIVE", "OPENCODE", "GEMINI_CLI", "QWEN_CODE", "COPILOT_AGENT", "AUGMENT_AGENT", "ANTIGRAVITY_AGENT", "KIRO_SESSION_ID", "TABNINE_CLI", "GOOSE_TERMINAL", "AGENT=amp|goose|1"]
+# Substrings of Co-Authored-By values that mark a commit as agent-authored.
+coauthors = ["noreply@anthropic.com", "claude", "codex", "openai", "cursor", "copilot", "aider", "devin", "gemini", "jules", "opencode", "cline", "goose"]
