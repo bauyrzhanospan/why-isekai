@@ -5,3 +5,4 @@
 /packaging/pypi/out/
 *.test
 .DS_Store
+__pycache__/

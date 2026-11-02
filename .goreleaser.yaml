@@ -22,10 +22,10 @@ builds:
 
 archives:
   - id: default
-    formats: [tar.gz]
+    format: tar.gz
     format_overrides:
       - goos: windows
-        formats: [zip]
+        format: zip
     # isekai_<version>_<os>_<arch>; install.sh and the npm/PyPI packagers rely on this.
     name_template: "isekai_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
     files:

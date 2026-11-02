@@ -1,7 +1,8 @@
 #!/bin/sh
 # Install isekai from GitHub Releases.
 #   curl -fsSL https://raw.githubusercontent.com/bauyrzhanospan/why-isekai/main/install.sh | sh
-# Options (env): ISEKAI_VERSION=0.1.0 (default: latest), ISEKAI_INSTALL_DIR=~/.local/bin
+# Options (env): ISEKAI_VERSION=0.1.0 (default: latest), ISEKAI_INSTALL_DIR=~/.local/bin,
+#   ISEKAI_DOWNLOAD_BASE=<mirror URL holding the release assets>
 set -eu
 
 repo="bauyrzhanospan/why-isekai"
@@ -42,7 +43,7 @@ ext=tar.gz
 exe=isekai
 [ "$os" = windows ] && { ext=zip; exe=isekai.exe; }
 name="isekai_${version}_${os}_${arch}.${ext}"
-base="https://github.com/$repo/releases/download/v${version}"
+base="${ISEKAI_DOWNLOAD_BASE:-https://github.com/$repo/releases/download/v${version}}"
 
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
