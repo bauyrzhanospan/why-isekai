@@ -258,7 +258,7 @@ Commits typed style:, docs: or ci: do not need Why.
 		b.WriteString("  hint: end the message with \"Why: <the problem, constraint or goal>\" (see: isekai --help)\n")
 	}
 	if blocking {
-		b.WriteString("Your message was kept in .git/COMMIT_EDITMSG; fix it and commit again (git commit -e -F .git/COMMIT_EDITMSG).\n")
+		b.WriteString("Your message is saved; add the trailers and retry: git commit -e -F \"$(git rev-parse --git-dir)/COMMIT_EDITMSG\"\n")
 	}
 	return b.String()
 }
