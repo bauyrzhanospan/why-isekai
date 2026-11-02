@@ -45,8 +45,12 @@ func HooksDir(dir string) (string, error) {
 	return Run(dir, "rev-parse", "--path-format=absolute", "--git-path", "hooks")
 }
 
-// CommentChar returns core.commentChar, defaulting to "#".
+// CommentChar returns core.commentString or core.commentChar, defaulting to
+// "#" (also for "auto", where git picks "#" unless the message uses it).
 func CommentChar(dir string) string {
+	if c, err := Run(dir, "config", "--get", "core.commentString"); err == nil && c != "" && c != "auto" {
+		return c
+	}
 	c, err := Run(dir, "config", "--get", "core.commentChar")
 	if err != nil || c == "" || c == "auto" {
 		return "#"

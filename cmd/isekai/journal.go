@@ -254,11 +254,13 @@ func hookCommitMsg(file string, stderr io.Writer) (int, error) {
 		fmt.Fprintln(stderr, "isekai: warning:", err, "— using defaults")
 		cfg = config.Default()
 	}
-	msg := journal.StripComments(string(data), gitx.CommentChar(root))
-	if strings.TrimSpace(msg) == "" {
+	cc := gitx.CommentChar(root)
+	if strings.TrimSpace(journal.StripComments(string(data), cc)) == "" {
 		return 0, nil // git aborts empty messages itself
 	}
-	m := journal.Parse(msg)
+	// Comment lines are ignored by the parser exactly as git ignores them, so
+	// the hook and `git log` agree even for -m messages, where git keeps them.
+	m := journal.ParseComment(journal.CutScissors(string(data), cc), cc)
 	r := journal.Check(m, cfg, journal.OSEnv)
 	if rep := journal.Report(r, cfg.Log.Mode, m.Subject); rep != "" {
 		fmt.Fprint(stderr, rep)

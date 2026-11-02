@@ -70,27 +70,66 @@ func StripComments(msg string, commentChar string) string {
 	return strings.Join(out, "\n")
 }
 
-// Parse splits a (comment-free) commit message into subject, body and
-// trailers. The trailer block is the last paragraph, when it is not the
-// subject paragraph and every line in it is either `Key: value` or a
-// continuation line starting with whitespace. This matches
-// `git interpret-trailers --parse` for messages written to the spec.
-func Parse(msg string) Message {
-	msg = strings.ReplaceAll(msg, "\r\n", "\n")
-	lines := strings.Split(strings.TrimRight(msg, " \t\n"), "\n")
-	// drop leading blank lines
-	for len(lines) > 0 && strings.TrimSpace(lines[0]) == "" {
-		lines = lines[1:]
+// CutScissors drops the scissors line and everything after it
+// (git commit --verbose puts the diff there).
+func CutScissors(msg, commentChar string) string {
+	if commentChar == "" {
+		commentChar = "#"
 	}
+	scissors := commentChar + " ------------------------ >8 ------------------------"
+	if i := strings.Index(msg, "\n"+scissors); i >= 0 {
+		return msg[:i+1]
+	}
+	if strings.HasPrefix(msg, scissors) {
+		return ""
+	}
+	return msg
+}
+
+// Parse is ParseComment with "#" as the comment character.
+func Parse(msg string) Message { return ParseComment(msg, "#") }
+
+// git treats a block with at least 25% trailer lines as trailers when one of
+// them starts with a git-generated prefix (trailer.c, git_generated_prefixes).
+var gitGeneratedPrefixes = []string{"Signed-off-by: ", "(cherry picked from commit "}
+
+// ParseComment splits a commit message into subject, body and trailers,
+// following git's trailer rules (git interpret-trailers --parse):
+//   - the trailer block is the last paragraph, never the subject paragraph;
+//   - comment lines (starting with commentChar) and trailing comment/blank
+//     lines are ignored, so the hook (which sees comments) and git log agree;
+//   - the block counts as trailers when all its lines are trailers, or when at
+//     least 25% are and one starts with a git-generated prefix
+//     (Signed-off-by, "(cherry picked from commit").
+func ParseComment(msg, commentChar string) Message {
+	if commentChar == "" {
+		commentChar = "#"
+	}
+	msg = strings.ReplaceAll(msg, "\r\n", "\n")
+	isComment := func(l string) bool { return strings.HasPrefix(l, commentChar) }
+	blank := func(l string) bool { return strings.TrimSpace(l) == "" }
+	lines := strings.Split(msg, "\n")
+	// Drop trailing blank and comment lines (git's ignored log message tail).
+	end := len(lines)
+	for end > 0 && (blank(lines[end-1]) || isComment(lines[end-1])) {
+		end--
+	}
+	lines = lines[:end]
+	start := 0
+	for start < len(lines) && (blank(lines[start]) || isComment(lines[start])) {
+		start++
+	}
+	lines = lines[start:]
 	var m Message
 	if len(lines) == 0 {
 		return m
 	}
-	// Subject paragraph: lines up to the first blank line, joined.
 	i := 0
 	var subj []string
-	for ; i < len(lines) && strings.TrimSpace(lines[i]) != ""; i++ {
-		subj = append(subj, strings.TrimSpace(lines[i]))
+	for ; i < len(lines) && !blank(lines[i]); i++ {
+		if !isComment(lines[i]) {
+			subj = append(subj, strings.TrimSpace(lines[i]))
+		}
 	}
 	m.Subject = strings.Join(subj, " ")
 	if mm := ccRe.FindStringSubmatch(m.Subject); mm != nil {
@@ -102,29 +141,52 @@ func Parse(msg string) Message {
 	rest := lines[i:]
 
 	// Last paragraph of the rest.
-	start := len(rest)
-	for start > 0 && strings.TrimSpace(rest[start-1]) != "" {
-		start--
+	bstart := len(rest)
+	for bstart > 0 && !blank(rest[bstart-1]) {
+		bstart--
 	}
-	block := rest[start:]
+	block := rest[bstart:]
 	var trailers []Trailer
-	ok := len(block) > 0
+	trailerLines, otherLines, recognized := 0, 0, false
+	lastWasTrailer := false
 	for _, line := range block {
-		if (line[0] == ' ' || line[0] == '\t') && len(trailers) > 0 {
+		if isComment(line) {
+			continue
+		}
+		if (line[0] == ' ' || line[0] == '\t') && lastWasTrailer {
 			trailers[len(trailers)-1].Value += " " + strings.TrimSpace(line)
 			continue
 		}
-		mm := trailerRe.FindStringSubmatch(line)
-		if mm == nil {
-			ok = false
-			break
+		for _, p := range gitGeneratedPrefixes {
+			if strings.HasPrefix(line, p) {
+				recognized = true
+			}
 		}
-		trailers = append(trailers, Trailer{Key: mm[1], Value: strings.TrimSpace(mm[2])})
+		if mm := trailerRe.FindStringSubmatch(line); mm != nil {
+			trailers = append(trailers, Trailer{Key: mm[1], Value: strings.TrimSpace(mm[2])})
+			trailerLines++
+			lastWasTrailer = true
+			continue
+		}
+		lastWasTrailer = false
+		if strings.HasPrefix(line, "(cherry picked from commit ") {
+			trailerLines++
+			continue
+		}
+		otherLines++
 	}
-	if ok {
+	isBlock := len(block) > 0 && trailerLines > 0 &&
+		(otherLines == 0 || (recognized && trailerLines*3 >= otherLines))
+	if isBlock {
 		m.Trailers = trailers
-		rest = rest[:start]
+		rest = rest[:bstart]
 	}
-	m.Body = strings.TrimSpace(strings.Join(rest, "\n"))
+	var body []string
+	for _, l := range rest {
+		if !isComment(l) {
+			body = append(body, l)
+		}
+	}
+	m.Body = strings.TrimSpace(strings.Join(body, "\n"))
 	return m
 }

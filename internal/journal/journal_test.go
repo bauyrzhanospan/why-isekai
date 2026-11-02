@@ -49,6 +49,12 @@ func TestParseMatchesGit(t *testing.T) {
 		"fix: subject only\n",
 		"Why: subject that looks like a trailer\n",
 		"feat: a\n\nbody\n\nSigned-off-by: A <a@b>\nWhy: reason for the change here\n",
+		"feat: a\n\nWhy: reason for the change here\nSigned-off-by: A <a@b>\nsome prose line\n",
+		"feat: a\n\nWhy: reason for the change here\nNext: x\n(cherry picked from commit 0123456789abcdef0123456789abcdef01234567)\n",
+		"feat: a\n\nWhy: reason for the change here\n# a comment line\nNext: x\n",
+		"feat: c\n\nWhy: issue number follows in a comment-looking line\n\n#42\n",
+		"feat: a\r\n\r\nWhy: crlf message reason here\r\nNext: y\r\n",
+		"feat: a\n\nWhy: trailing spaces reason here   \nNext: z  \n\n\n",
 	}
 	for _, c := range cases {
 		cmd := exec.Command("git", "interpret-trailers", "--parse", "--no-divider")
