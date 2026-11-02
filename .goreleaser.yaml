@@ -1,0 +1,51 @@
+# GoReleaser v2: static binaries for every platform agents run on.
+version: 2
+
+project_name: why-isekai
+
+before:
+  hooks:
+    - go mod tidy
+    - go test ./...
+
+builds:
+  - id: isekai
+    main: ./cmd/isekai
+    binary: isekai
+    env:
+      - CGO_ENABLED=0
+    goos: [linux, darwin, windows]
+    goarch: [amd64, arm64]
+    flags: [-trimpath]
+    ldflags:
+      - -s -w -X main.version={{ .Version }}
+
+archives:
+  - id: default
+    formats: [tar.gz]
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+    # isekai_<version>_<os>_<arch>; install.sh and the npm/PyPI packagers rely on this.
+    name_template: "isekai_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    files:
+      - LICENSE
+      - README.md
+      - SPEC.md
+
+checksum:
+  name_template: checksums.txt
+
+changelog:
+  use: git
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^ci:"
+      - "^style:"
+
+release:
+  github:
+    owner: bauyrzhanospan
+    name: why-isekai

@@ -1,0 +1,7 @@
+/dist/
+/isekai
+/isekai.exe
+/packaging/npm/out/
+/packaging/pypi/out/
+*.test
+.DS_Store
