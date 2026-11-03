@@ -1,0 +1,25 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if command -v isekai >/dev/null 2>&1; then isekai brief --format md 2>/dev/null || true; else echo 'why-isekai: the isekai program is not installed, so there is no project brief. Install: npm i -g why-isekai | pipx install why-isekai | go install github.com/bauyrzhanospan/why-isekai/cmd/isekai@latest. Until then read history with: git log -n 20 --format=\"%h %s%n  why: %(trailers:key=Why,valueonly)\"'; fi"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if command -v isekai >/dev/null 2>&1; then isekai hook claude-guard; fi"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "name": "why-isekai",
+  "owner": { "name": "Bauyrzhan Ospan", "url": "https://github.com/bauyrzhanospan" },
+  "description": "Project memory for AI agents, kept in git.",
+  "plugins": [
+    {
+      "name": "why-isekai",
+      "source": "./plugins/claude-code",
+      "description": "Brief at session start, commit trailers, --no-verify guard, isekai MCP tools."
+    }
+  ]
+}

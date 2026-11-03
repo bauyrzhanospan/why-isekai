@@ -1,0 +1,11 @@
+{
+  "name": "why-isekai",
+  "displayName": "why-isekai — project memory",
+  "version": "0.1.0",
+  "description": "Project memory for agents, kept in git: the brief at session start (why, dead ends, open work), commit trailers Why/Tried/Next/Done/Agent, a guard against git commit --no-verify, and the isekai MCP tools.",
+  "author": { "name": "Bauyrzhan Ospan", "url": "https://github.com/bauyrzhanospan" },
+  "homepage": "https://github.com/bauyrzhanospan/why-isekai",
+  "repository": "https://github.com/bauyrzhanospan/why-isekai",
+  "license": "MIT",
+  "keywords": ["memory", "git", "commit-trailers", "agents-md", "isekai"]
+}

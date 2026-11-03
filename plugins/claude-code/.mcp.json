@@ -1,0 +1,5 @@
+{
+  "mcpServers": {
+    "isekai": { "command": "isekai", "args": ["mcp"] }
+  }
+}
