@@ -697,6 +697,10 @@ func TestMCPServer(t *testing.T) {
 		`{"jsonrpc":"2.0","id":4,"method":"tools/call","params":{"name":"isekai_wiki_add","arguments":{"page":"gotchas","text":"tests need git 2.30+"}}}`,
 		`{"jsonrpc":"2.0","id":5,"method":"tools/call","params":{"name":"isekai_check","arguments":{"range":"--output=/tmp/x"}}}`,
 		`{"jsonrpc":"2.0","id":6,"method":"nope"}`,
+		`{"jsonrpc":"2.0","id":7,"method":"initialize","params":{"protocolVersion":"1999-01-01"}}`,
+		`{"jsonrpc":"2.0","id":8,"method":"tools/call","params":{"name":"isekai_nope","arguments":{}}}`,
+		`{"jsonrpc":"2.0","id":9,"method":"tools/call","params":{"name":"isekai_wiki_add","arguments":{"page":"gotchas","text":"-x is a broken flag --author=root"}}}`,
+		`{"jsonrpc":"2.0","id":10,"method":"tools/call","params":{"name":"isekai_wiki_add","arguments":{"page":"gotchas","text":"x","commit":"--output=/tmp/x"}}}`,
 	}, "\n") + "\n"
 	cmd := exec.Command(filepath.Join(binDir, "isekai"), "mcp")
 	cmd.Dir, cmd.Env, cmd.Stdin = r.dir, r.env, strings.NewReader(in)
@@ -705,8 +709,8 @@ func TestMCPServer(t *testing.T) {
 		t.Fatal(err)
 	}
 	lines := strings.Split(strings.TrimSpace(string(out)), "\n")
-	if len(lines) != 6 {
-		t.Fatalf("want 6 responses (notification gets none), got %d:\n%s", len(lines), out)
+	if len(lines) != 10 {
+		t.Fatalf("want 10 responses (notification gets none), got %d:\n%s", len(lines), out)
 	}
 	var resp []map[string]any
 	for _, l := range lines {
@@ -734,6 +738,18 @@ func TestMCPServer(t *testing.T) {
 	}
 	if resp[5]["error"] == nil {
 		t.Fatal("unknown method must be an error")
+	}
+	if !strings.Contains(lines[6], `"protocolVersion":"2025-06-18"`) {
+		t.Errorf("unknown protocol version echoed: %s", lines[6])
+	}
+	if e, ok := resp[7]["error"].(map[string]any); !ok || e["code"] != float64(-32602) {
+		t.Errorf("unknown tool: %s", lines[7])
+	}
+	if got := text(8); !strings.Contains(got, "added gotchas #2: -x is a broken flag --author=root") {
+		t.Errorf("text starting with - :\n%s", got)
+	}
+	if resp[9]["result"].(map[string]any)["isError"] != true || strings.Contains(string(mustRead(t, filepath.Join(r.dir, ".isekai/wiki/gotchas.md"))), "--output") {
+		t.Error("bad commit accepted")
 	}
 }
 

@@ -12,6 +12,8 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+
+	"github.com/BurntSushi/toml"
 )
 
 // MaxSkinBytes caps a skin folder, assets included.
@@ -222,32 +224,74 @@ func inlineAssets(dir, s string) string {
 	return s
 }
 
-// SetLook writes [ui] look = "<name>" into .isekai/config.toml.
+// SetLook writes [ui] look = "<name>" into .isekai/config.toml, keeping the
+// rest of the file (comments included) as it is. The result is decoded
+// before it is written, so a config isekai cannot edit safely is left alone.
 func SetLook(configPath, name string) error {
+	if name != "isekai" && name != "corporate" && !ValidName(name) {
+		return fmt.Errorf("look %q: not a valid skin name", name)
+	}
 	data, err := os.ReadFile(configPath)
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
 		return err
 	}
-	s := string(data)
-	line := fmt.Sprintf("look = %q", name)
-	lookRe := regexp.MustCompile(`(?m)^(\s*)look\s*=\s*"[^"]*"`)
-	uiRe := regexp.MustCompile(`(?m)^\[ui\]\s*$`)
-	switch {
-	case uiRe.MatchString(s) && lookRe.MatchString(s[uiRe.FindStringIndex(s)[0]:]):
-		i := uiRe.FindStringIndex(s)[0]
-		loc := lookRe.FindStringIndex(s[i:])
-		s = s[:i+loc[0]] + line + s[i+loc[1]:]
-	case uiRe.MatchString(s):
-		i := uiRe.FindStringIndex(s)[1]
-		s = s[:i] + "\n" + line + s[i:]
-	default:
-		if s != "" && !strings.HasSuffix(s, "\n") {
-			s += "\n"
+	var before map[string]any
+	if _, err := toml.Decode(string(data), &before); err != nil {
+		return fmt.Errorf("%s: %w", filepath.Base(configPath), err)
+	}
+	line := `look = "` + name + `"`
+	lines := strings.Split(string(data), "\n")
+	ui, end := -1, len(lines)
+	for i, l := range lines {
+		h := tableRe.FindStringSubmatch(l)
+		if h == nil {
+			continue
 		}
-		s += "\n[ui]\n" + line + "\n"
+		if ui >= 0 {
+			end = i
+			break
+		}
+		if h[1] == "ui" {
+			ui = i
+		}
+	}
+	switch {
+	case ui < 0:
+		s := strings.TrimRight(string(data), "\n")
+		if s != "" {
+			s += "\n\n"
+		}
+		lines = strings.Split(s+"[ui]\n"+line+"\n", "\n")
+	default:
+		done := false
+		for i := ui + 1; i < end; i++ {
+			if lookRe.MatchString(lines[i]) {
+				lines[i] = lookRe.ReplaceAllString(lines[i], "${1}"+line+"${2}")
+				done = true
+				break
+			}
+		}
+		if !done {
+			lines = append(lines[:ui+1], append([]string{line}, lines[ui+1:]...)...)
+		}
+	}
+	out := strings.Join(lines, "\n")
+	var after struct {
+		UI struct {
+			Look string `toml:"look"`
+		} `toml:"ui"`
+	}
+	if _, err := toml.Decode(out, &after); err != nil || after.UI.Look != name {
+		return fmt.Errorf("%s: could not set [ui] look safely; set look = %q under [ui] by hand", filepath.Base(configPath), name)
 	}
 	if err := os.MkdirAll(filepath.Dir(configPath), 0o755); err != nil {
 		return err
 	}
-	return os.WriteFile(configPath, []byte(s), 0o644)
+	return os.WriteFile(configPath, []byte(out), 0o644)
 }
+
+// A table header such as [ui], [ ui ] or [ui]  # comment.
+var tableRe = regexp.MustCompile(`^\s*\[\s*([A-Za-z0-9_.-]+)\s*\]\s*(?:#.*)?$`)
+
+// A look = "..." line, keeping indentation and a trailing comment.
+var lookRe = regexp.MustCompile(`^(\s*)look\s*=\s*(?:"[^"]*"|'[^']*')(\s*(?:#.*)?)$`)

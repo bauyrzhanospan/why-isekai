@@ -119,7 +119,10 @@ func cmdUI(args []string, out io.Writer) (int, error) {
 		if !found {
 			return 1, fmt.Errorf("no look %q; see isekai ui list", name)
 		}
-		if dashboard.ValidName(name) {
+		if name != "isekai" && name != "corporate" {
+			if !dashboard.ValidName(name) {
+				return 1, fmt.Errorf("skin %q: rename the folder to lowercase letters, digits and dashes", name)
+			}
 			s, _ := stats.Build(root, cfg, time.Now())
 			data, _ := json.Marshal(s)
 			ps, err := dashboard.CheckSkin(filepath.Join(root, dashboard.SkinsDir, name), data)

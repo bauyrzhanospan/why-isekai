@@ -40,6 +40,15 @@ func newFlags(name string) *flag.FlagSet {
 
 // parseInterspersed lets flags appear after positional arguments.
 func parseInterspersed(fs *flag.FlagSet, args []string) ([]string, error) {
+	// Everything after "--" is positional, even text that starts with "-".
+	// It is split off first, because flag.Parse drops a "--" silently.
+	var tail []string
+	for i, a := range args {
+		if a == "--" {
+			args, tail = args[:i], args[i+1:]
+			break
+		}
+	}
 	var pos []string
 	for {
 		if err := fs.Parse(args); err != nil {
@@ -47,10 +56,7 @@ func parseInterspersed(fs *flag.FlagSet, args []string) ([]string, error) {
 		}
 		args = fs.Args()
 		if len(args) == 0 {
-			return pos, nil
-		}
-		if args[0] == "--" {
-			return append(pos, args[1:]...), nil
+			return append(pos, tail...), nil
 		}
 		pos = append(pos, args[0])
 		args = args[1:]

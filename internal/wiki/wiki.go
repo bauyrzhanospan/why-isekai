@@ -43,6 +43,8 @@ var entryRe = regexp.MustCompile(`^\s*[-*]\s+(.*?)\s*\[(\d{4}-\d{2}-\d{2})\s+(\S
 
 var nameRe = regexp.MustCompile(`^[A-Za-z0-9_-]+$`)
 
+var commitRe = regexp.MustCompile(`^[0-9a-f]{4,40}$`)
+
 func pagePath(root, page string) (string, error) {
 	page = strings.TrimSuffix(page, ".md")
 	if !nameRe.MatchString(page) {
@@ -216,6 +218,8 @@ func Add(root, page, text string, o AddOptions) (Entry, []string, error) {
 	commit := o.Commit
 	if commit == "" {
 		commit = "-"
+	} else if !commitRe.MatchString(commit) {
+		return Entry{}, nil, fmt.Errorf("commit %q: want a commit hash (4 to 40 hex digits)", commit)
 	}
 	if o.Now.IsZero() {
 		o.Now = time.Now()

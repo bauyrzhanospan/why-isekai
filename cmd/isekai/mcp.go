@@ -18,6 +18,10 @@ import (
 
 const mcpProtocol = "2025-06-18"
 
+// mcpSupported lists protocol versions this server can answer in: the tools
+// it uses (tools/list, tools/call with text content) are the same in all.
+var mcpSupported = []string{"2024-11-05", "2025-03-26", "2025-06-18"}
+
 type rpcReq struct {
 	JSONRPC string          `json:"jsonrpc"`
 	ID      json.RawMessage `json:"id,omitempty"`
@@ -123,9 +127,13 @@ func mcpHandle(req rpcReq) (rpcResp, bool) {
 			ProtocolVersion string `json:"protocolVersion"`
 		}
 		json.Unmarshal(req.Params, &p)
-		pv := p.ProtocolVersion
-		if pv == "" {
-			pv = mcpProtocol
+		// Answer with the client's version only if this server speaks it;
+		// otherwise offer ours and let the client decide (MCP lifecycle).
+		pv := mcpProtocol
+		for _, v := range mcpSupported {
+			if p.ProtocolVersion == v {
+				pv = v
+			}
 		}
 		resp.Result = map[string]any{
 			"protocolVersion": pv,
@@ -146,12 +154,25 @@ func mcpHandle(req rpcReq) (rpcResp, bool) {
 			resp.Error = &rpcErr{-32602, "invalid params"}
 			break
 		}
+		if !mcpKnownTool(p.Name) {
+			resp.Error = &rpcErr{-32602, "unknown tool: " + p.Name}
+			break
+		}
 		text, isErr := mcpCall(p.Name, p.Arguments)
 		resp.Result = map[string]any{"content": []any{map[string]any{"type": "text", "text": text}}, "isError": isErr}
 	default:
 		resp.Error = &rpcErr{-32601, "method not found: " + req.Method}
 	}
 	return resp, true
+}
+
+func mcpKnownTool(name string) bool {
+	for _, t := range mcpTools {
+		if t.Name == name {
+			return true
+		}
+	}
+	return false
 }
 
 func argStr(a map[string]any, k string) string {
@@ -207,10 +228,12 @@ func mcpCall(name string, a map[string]any) (string, bool) {
 		if page == "" || text == "" {
 			return "page and text are required", true
 		}
-		args := []string{"add", page, text}
+		args := []string{"add"}
 		if c := argStr(a, "commit"); c != "" {
-			args = append(args, "--commit", c)
+			args = append(args, "--commit="+c)
 		}
+		// "--" ends the flags: text such as "-x breaks" or "--author=x" is text.
+		args = append(args, "--", page, text)
 		// Anything calling through MCP is an agent.
 		if agentName() == "" {
 			os.Setenv("ISEKAI_AGENT", "mcp-client")

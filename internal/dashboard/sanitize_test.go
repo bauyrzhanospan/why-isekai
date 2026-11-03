@@ -6,6 +6,8 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+
+	"github.com/BurntSushi/toml"
 )
 
 func TestUnsafeHTMLRejects(t *testing.T) {
@@ -67,5 +69,40 @@ func TestLoadSkinSkipsSymlinks(t *testing.T) {
 	os.Symlink(secret, filepath.Join(dir, "index.html"))
 	if _, err := LoadSkin(dir); err == nil {
 		t.Fatal("symlinked index.html accepted")
+	}
+}
+
+func TestSetLookKeepsConfigValid(t *testing.T) {
+	dir := t.TempDir()
+	p := filepath.Join(dir, "config.toml")
+	cases := map[string]string{
+		"commented header":         "[ui]  # dashboard\nlook = \"isekai\"   # current\n\n[issues]\nenabled = false\n",
+		"spaced header":            "[ ui ]\n\n[log]\nn = 20\n",
+		"look in later table only": "[ui]\n\n[other]\nlook = \"keep-me\"\n",
+		"no ui table":              "[log]\nn = 20",
+		"empty":                    "",
+	}
+	for name, in := range cases {
+		os.WriteFile(p, []byte(in), 0o644)
+		if err := SetLook(p, "moba-hud"); err != nil {
+			t.Fatalf("%s: %v", name, err)
+		}
+		out, _ := os.ReadFile(p)
+		var c struct {
+			UI    struct{ Look string } `toml:"ui"`
+			Other struct{ Look string } `toml:"other"`
+		}
+		if _, err := toml.Decode(string(out), &c); err != nil || c.UI.Look != "moba-hud" {
+			t.Fatalf("%s: %v %q\n%s", name, err, c.UI.Look, out)
+		}
+		if strings.Contains(in, "keep-me") && c.Other.Look != "keep-me" {
+			t.Fatalf("%s: touched another table:\n%s", name, out)
+		}
+		if strings.Contains(in, "# current") && !strings.Contains(string(out), "# current") {
+			t.Errorf("%s: comment lost:\n%s", name, out)
+		}
+	}
+	if err := SetLook(p, `x"\nevil = 1`); err == nil {
+		t.Fatal("bad name written")
 	}
 }
