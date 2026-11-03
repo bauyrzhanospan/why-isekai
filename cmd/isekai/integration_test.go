@@ -875,3 +875,51 @@ func TestIssuesSync(t *testing.T) {
 		t.Errorf("--if-enabled with sync off:\n%s", out)
 	}
 }
+
+func TestSkins(t *testing.T) {
+	r := newRepo(t, true)
+	r.mustInit()
+	r.commit("feat: a\n\nWhy: a history for the skin to show\nNext: something to do")
+	if out, code := r.isekai("ui", "new", "moba-dark", "--from", "corporate"); code != 0 {
+		t.Fatal(out)
+	}
+	if out, code := r.isekai("ui", "check", "moba-dark"); code != 0 || !strings.Contains(out, "moba-dark: ok") {
+		t.Fatalf("fresh skin fails check (code %d):\n%s", code, out)
+	}
+	dir := filepath.Join(r.dir, ".isekai/ui/skins/moba-dark")
+	// A font asset is inlined; a binding typo is reported.
+	os.WriteFile(filepath.Join(dir, "assets", "hud.woff2"), []byte("wOF2fake"), 0o644)
+	css := string(mustRead(t, filepath.Join(dir, "skin.css")))
+	os.WriteFile(filepath.Join(dir, "skin.css"), []byte(css+"\n@font-face{font-family:Hud;src:url(assets/hud.woff2)}\n"), 0o644)
+	html := string(mustRead(t, filepath.Join(dir, "index.html")))
+	os.WriteFile(filepath.Join(dir, "index.html"), []byte(html+`<span data-bind="journal.whypct"></span>`), 0o644)
+	out, code := r.isekai("ui", "check", "moba-dark")
+	if code != 0 || !strings.Contains(out, `binding "journal.whypct"`) {
+		t.Fatalf("typo not reported (code %d):\n%s", code, out)
+	}
+	if out, code := r.isekai("ui", "use", "moba-dark"); code != 0 {
+		t.Fatal(out)
+	}
+	if !strings.Contains(string(mustRead(t, filepath.Join(r.dir, ".isekai/config.toml"))), `look = "moba-dark"`) {
+		t.Fatal("config not updated")
+	}
+	file := filepath.Join(t.TempDir(), "d.html")
+	r.isekai("dashboard", "-o", file)
+	page := string(mustRead(t, file))
+	if !strings.Contains(page, `data-default-look="moba-dark"`) || !strings.Contains(page, "data:font/woff2;base64,") || strings.Contains(page, "url(assets/") {
+		t.Fatal("skin not used or asset not inlined")
+	}
+	// Removing a required slot and adding a script both fail the check and block use.
+	bad := strings.Replace(html, `data-each="open"`, `data-each="dead_ends"`, 1) + "<script>x()</script>"
+	os.WriteFile(filepath.Join(dir, "index.html"), []byte(bad), 0o644)
+	out, code = r.isekai("ui", "check", "moba-dark")
+	if code == 0 || !strings.Contains(out, "required slot missing") || !strings.Contains(out, "<script>") {
+		t.Fatalf("bad skin passed (code %d):\n%s", code, out)
+	}
+	if _, code := r.isekai("ui", "use", "moba-dark"); code == 0 {
+		t.Fatal("use accepted a failing skin")
+	}
+	if out, _ := r.isekai("ui", "list"); !strings.Contains(out, "corporate") || !strings.Contains(out, "!") {
+		t.Fatalf("list:\n%s", out)
+	}
+}

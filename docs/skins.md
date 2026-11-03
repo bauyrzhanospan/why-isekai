@@ -1,6 +1,6 @@
 # Skins: how an agent changes the isekai interface
 
-> Status: `isekai stats --format json`, `isekai dashboard` with the built-in looks and the binding runtime exist. `isekai ui new | check | use` are roadmap task 22; until then, create the folder by hand and select it with `[ui] look = "<name>"` in `.isekai/config.toml` or `isekai dashboard --look <name>`.
+> Status: implemented (`isekai stats`, `isekai dashboard`, `isekai ui list | new | check | use`). Not yet: `isekai ui add <git-url>`, and checking contrast automatically.
 
 The dashboard (`isekai dashboard`) shows the same data in any look: a game hero, a corporate report, a MOBA-style HUD, a terminal, whatever a developer wants. A look is a **skin**: a small folder of HTML and CSS. The `isekai` program never calls an LLM, so it does not design skins itself. Instead the developer describes the look to **their own agent**, and the agent follows this page to build, check and apply it.
 
@@ -20,6 +20,10 @@ The developer said something like *"make the dashboard look like a dark fantasy 
 6. **Apply it.** Run `isekai ui use <name>`. This sets `[ui] skin = "<name>"` in `.isekai/config.toml`. Commit the skin folder and the config with a `Why:` trailer that quotes what the developer asked for, so everyone who clones gets the same look.
 
 Then tell the developer which skin is active and how to switch back: `isekai ui use isekai`, or **Change look** in the dashboard.
+
+## Example
+
+[`.isekai/ui/skins/moba-hud/`](../.isekai/ui/skins/moba-hud/) in this repository is a dark-fantasy MOBA HUD built by an agent following exactly this page: a hero portrait, "why" and "discipline" bars, abilities on Q W E R, integrations as a 3×2 item grid, dead ends as a kill feed and open work as objectives. Try it with `isekai dashboard --look moba-hud --open`.
 
 ## Original work only
 

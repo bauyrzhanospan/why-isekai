@@ -1,0 +1,5 @@
+name = "moba-hud"
+description = "Dark-fantasy MOBA HUD: hero portrait, abilities on Q W E R, integrations as items, objectives"
+author = "claude-opus-5-5 (example skin built by following docs/skins.md)"
+version = 1
+base = "isekai"

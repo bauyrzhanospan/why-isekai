@@ -93,7 +93,7 @@ func LoadSkin(dir string) (Look, error) {
 	if name == "" {
 		name = id
 	}
-	return Look{ID: id, Name: name, Description: meta.Description, HTML: string(h), CSS: string(c)}, nil
+	return Look{ID: id, Name: name, Description: meta.Description, HTML: inlineAssets(dir, string(h)), CSS: inlineAssets(dir, string(c))}, nil
 }
 
 var unsafeRes = []struct{ what, re string }{
@@ -107,6 +107,8 @@ var unsafeRes = []struct{ what, re string }{
 
 // unsafeMarkup returns what makes a skin unsafe, or "".
 func unsafeMarkup(s string) string {
+	// XML namespace identifiers look like URLs but are never fetched.
+	s = regexp.MustCompile(`(?i)https?://www\.w3\.org/[0-9a-z/]*`).ReplaceAllString(s, "")
 	for _, u := range unsafeRes {
 		if regexp.MustCompile(u.re).MatchString(s) {
 			return u.what

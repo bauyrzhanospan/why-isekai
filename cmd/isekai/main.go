@@ -30,6 +30,7 @@ Usage:
                                                values masked in its output
   isekai secrets list|set|init                 manage secret references (values never shown to agents)
   isekai wiki add|confirm|stale|list           project wiki in .isekai/wiki
+  isekai ui list|new|check|use                 dashboard looks; agents build skins by docs/skins.md
   isekai issues sync|ask|status               mirror open work into issues; read humans' answers back
   isekai mcp [--repo DIR]                      MCP server over stdio (brief, check, wiki, secrets)
   isekai hook <name> ...                       entry points called by git / agent hooks
@@ -76,6 +77,8 @@ func run(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 		err = cmdSecrets(rest, stdin, stdout)
 	case "wiki":
 		code, err = cmdWiki(rest, stdout, stderr)
+	case "ui":
+		code, err = cmdUI(rest, stdout)
 	case "issues":
 		code, err = cmdIssues(rest, stdout)
 	case "mcp":

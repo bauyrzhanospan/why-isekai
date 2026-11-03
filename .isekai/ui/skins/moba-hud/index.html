@@ -1,0 +1,62 @@
+<div class="m-world">
+  <header class="m-top">
+    <div class="m-score" aria-label="Score">
+      <div><b data-bind="journal.commits"></b><small>commits</small></div>
+      <div class="m-vs"><span data-bind="repo.name"></span><small>branch <span data-bind="repo.branch"></span></small></div>
+      <div><b data-bind="journal.dead_ends"></b><small>dead ends</small></div>
+    </div>
+    <isekai-look-button></isekai-look-button>
+  </header>
+
+  <div class="m-field">
+    <section class="m-feed" aria-labelledby="m-feed-h">
+      <h2 id="m-feed-h">Dead ends — never again</h2>
+      <p class="m-dim" data-if="!dead_ends">No dead ends recorded yet.</p>
+      <template data-each="dead_ends" data-limit="6">
+        <div class="m-kill"><span class="m-x" aria-hidden="true">✕</span><span data-bind=".text"></span><code data-bind=".commit"></code></div>
+      </template>
+    </section>
+
+    <section class="m-map" aria-labelledby="m-map-h">
+      <h2 id="m-map-h">Objectives</h2>
+      <div class="m-alert" data-if="journal.waiting_for_humans"><b data-bind="journal.waiting_for_humans"></b> agent questions need your call</div>
+      <p class="m-dim" data-if="!journal.waiting_for_humans">No questions waiting for you.</p>
+      <p class="m-dim" data-if="!open">No open objectives.</p>
+      <ol class="m-objectives">
+        <template data-each="open" data-limit="7">
+          <li><span data-bind=".text"></span><code data-bind=".commit"></code></li>
+        </template>
+      </ol>
+    </section>
+  </div>
+
+  <section class="m-hud" aria-label="Hero">
+    <div class="m-portrait">
+      <isekai-hero></isekai-hero>
+      <span class="m-level" data-bind="level.level"></span>
+    </div>
+
+    <div class="m-core">
+      <div class="m-name"><template data-each="agents" data-limit="1"><b data-bind=".id"></b></template><b data-if="!agents">your agent</b> <span class="m-dim">Summoned Engineer</span></div>
+      <div class="m-bar m-hp" data-bind-var="--v:journal.why_pct" title="Commits that explain why"><i></i><span><span data-bind="journal.why_pct"></span>% why</span></div>
+      <div class="m-bar m-mp" data-bind-var="--v:journal.passing_pct" title="Commits passing the check"><i></i><span><span data-bind="journal.passing_pct"></span>% discipline</span></div>
+      <div class="m-bar m-xp" data-bind-var="--v:level.pct" title="Experience to next level"><i></i><span>XP <span data-bind="level.xp"></span> / <span data-bind="level.next_xp"></span></span></div>
+      <div class="m-abilities" aria-label="Abilities">
+        <template data-each="skills" data-limit="4">
+          <div class="m-ability" data-bind-state=".learned" data-bind-attr="title:.what">
+            <isekai-icon data-name-from=".id"></isekai-icon>
+            <kbd data-bind=".key"></kbd>
+          </div>
+        </template>
+      </div>
+    </div>
+
+    <div class="m-items" aria-label="Items: integrations">
+      <template data-each="gear" data-limit="6">
+        <div class="m-item" data-bind-state=".equipped" data-bind-attr="title:.name">
+          <isekai-icon data-name-from=".id" data-bind-state=".rarity"></isekai-icon>
+        </div>
+      </template>
+    </div>
+  </section>
+</div>

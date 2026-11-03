@@ -1,0 +1,63 @@
+/* moba-hud: an original dark-fantasy MOBA HUD for the isekai dashboard.
+   Genre conventions only (portrait, ability bar with hotkeys, item grid,
+   objectives); no assets from any game. */
+body {
+  margin: 0; color: #EDE6D3; font: 15px/1.45 Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
+  background:
+    radial-gradient(ellipse at 30% 20%, rgba(70, 110, 60, 0.35), transparent 60%),
+    radial-gradient(ellipse at 75% 60%, rgba(120, 40, 30, 0.35), transparent 55%),
+    linear-gradient(160deg, #141812, #0B0A08 60%, #160C0A);
+  min-height: 100vh;
+  --hero-cape: #8C2A1E;
+}
+code { font: 12px ui-monospace, Menlo, monospace; color: #B9A77A; }
+h2 { margin: 0 0 8px; font-size: 14px; letter-spacing: 0.14em; text-transform: uppercase; color: #E2C277; }
+.m-dim { color: #A39A82; margin: 0; font-size: 14px; }
+.m-world { max-width: 1200px; margin: 0 auto; padding: 16px 16px 24px; display: flex; flex-direction: column; gap: 16px; min-height: calc(100vh - 40px); box-sizing: border-box; }
+.m-top { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.m-score { display: flex; align-items: stretch; background: linear-gradient(#26201A, #15110D); border: 1px solid #6B5530; box-shadow: inset 0 0 0 1px #2A2218; }
+.m-score > div { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 6px 18px; }
+.m-score b { font-size: 22px; color: #F3E3BC; }
+.m-score small { font-size: 11px; color: #A39A82; text-transform: uppercase; letter-spacing: 0.1em; }
+.m-vs { border-left: 1px solid #4A3B22; border-right: 1px solid #4A3B22; font-weight: 700; color: #E2C277; }
+.m-field { flex: 1; display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-start; }
+.m-feed { flex: 1 1 340px; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.m-kill { display: flex; gap: 10px; align-items: center; background: rgba(20, 14, 10, 0.78); border-left: 3px solid #B33A2A; padding: 8px 10px; font-size: 14px; }
+.m-kill span:nth-child(2) { flex: 1; min-width: 0; }
+.m-x { color: #E0533F; font-weight: 900; }
+.m-map { flex: 0 1 420px; min-width: 0; margin-left: auto; background: rgba(18, 22, 16, 0.85); border: 2px solid #6B5530; box-shadow: inset 0 0 0 1px #2A2218, 0 8px 24px rgba(0, 0, 0, 0.5); padding: 14px; display: flex; flex-direction: column; gap: 8px; }
+.m-alert { background: #5A1E14; border: 1px solid #C9533F; color: #FFE1D6; padding: 8px 10px; font-size: 14px; }
+.m-objectives { margin: 0; padding-left: 22px; display: flex; flex-direction: column; gap: 6px; font-size: 14px; }
+.m-objectives li::marker { color: #E2C277; font-weight: 700; }
+.m-objectives code { margin-left: 8px; }
+.m-hud { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px; background: linear-gradient(#2A2219, #120E0A); border: 2px solid #6B5530; box-shadow: inset 0 0 0 1px #2E2519, 0 -6px 30px rgba(0, 0, 0, 0.6); padding: 12px; }
+.m-portrait { position: relative; width: 132px; height: 132px; flex-shrink: 0; border-radius: 50%; overflow: hidden; border: 3px solid #C9A35A; background: radial-gradient(circle at 50% 40%, #2E3A52, #0D0F18); }
+.m-portrait isekai-hero { display: block; width: 170%; margin: -29% 0 0 -35%; }
+.m-portrait isekai-hero svg { width: 100%; height: auto; display: block; }
+.m-level { position: absolute; z-index: 1; right: 4px; bottom: 4px; min-width: 28px; height: 28px; border-radius: 14px; background: #1A140E; border: 2px solid #C9A35A; color: #F3E3BC; font-weight: 800; display: flex; align-items: center; justify-content: center; }
+.m-core { flex: 1 1 320px; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.m-name { font-size: 16px; }
+.m-name b { color: #F3E3BC; }
+.m-bar { position: relative; height: 20px; background: #0E0B08; border: 1px solid #3E3122; overflow: hidden; }
+.m-bar i { position: absolute; inset: 0 auto 0 0; width: calc(var(--v, 0) * 1%); }
+.m-bar > span { position: relative; display: block; text-align: center; font-size: 12px; font-weight: 700; line-height: 20px; color: #FFFFFF; text-shadow: 0 1px 2px #000; }
+.m-hp i { background: linear-gradient(#58B04A, #2E7426); }
+.m-mp i { background: linear-gradient(#4A86D6, #234E8F); }
+.m-xp { height: 10px; }
+.m-xp i { background: linear-gradient(#E2C277, #9C7A2E); }
+.m-xp > span { display: none; }
+.m-abilities { display: flex; gap: 8px; margin-top: 4px; flex-wrap: wrap; }
+.m-ability { position: relative; width: 56px; height: 56px; background: #15202E; border: 2px solid #5C4A2A; display: flex; align-items: center; justify-content: center; color: #5E6A78; filter: grayscale(1); }
+.m-ability isekai-icon { width: 30px; height: 30px; display: inline-flex; }
+.m-ability isekai-icon svg { width: 100%; height: 100%; }
+.m-ability[data-state="true"] { color: #CFE6FF; border-color: #C9A35A; filter: none; box-shadow: inset 0 0 12px rgba(80, 150, 255, 0.35); }
+.m-ability kbd { position: absolute; left: 2px; top: 1px; font: 700 11px Inter, system-ui, sans-serif; color: #F3E3BC; }
+.m-items { display: grid; grid-template-columns: repeat(3, 48px); gap: 4px; padding: 6px; background: #0E0B08; border: 1px solid #3E3122; }
+.m-item { width: 48px; height: 40px; background: #1A1510; border: 1px solid #2E2519; display: flex; align-items: center; justify-content: center; color: #4A4033; }
+.m-item isekai-icon { width: 24px; height: 24px; display: inline-flex; }
+.m-item isekai-icon svg { width: 100%; height: 100%; }
+.m-item[data-state="true"] { background: #2A2116; border-color: #6B5530; color: #E2C277; }
+.m-item[data-state="true"] isekai-icon[data-state="legendary"] { color: #F2B84B; }
+.m-item[data-state="true"] isekai-icon[data-state="epic"] { color: #C38BFF; }
+.m-item[data-state="true"] isekai-icon[data-state="rare"] { color: #6FB2FF; }
+.isekai-look-button { font: 700 14px Inter, system-ui, sans-serif; min-height: 44px; padding: 0 16px; background: linear-gradient(#5A4424, #3A2C17); border: 1px solid #C9A35A; color: #F3E3BC; cursor: pointer; }
