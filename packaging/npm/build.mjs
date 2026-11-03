@@ -108,12 +108,37 @@ export function build({ version, dist, out, platforms = PLATFORMS }) {
 
 function publish(out) {
   const dirs = fs.readdirSync(out).sort((a, b) => (a === MAIN) - (b === MAIN)); // platforms first
+  const failed = [];
   for (const d of dirs) {
-    const { version } = JSON.parse(fs.readFileSync(path.join(out, d, "package.json"), "utf8"));
+    const { name, version } = JSON.parse(fs.readFileSync(path.join(out, d, "package.json"), "utf8"));
+    if (d === MAIN && failed.length) {
+      console.error(`not publishing ${name}: platform packages failed: ${failed.join(", ")}`);
+      process.exit(1);
+    }
+    // Already on npm, or submitted and waiting in npm's staged publishing
+    // review (a re-run after a partial publish): a version can be published
+    // only once, so skip it.
+    const seen = spawnSync("npm", ["view", `${name}@${version}`, "version"], { encoding: "utf8" });
+    if (seen.status === 0 && seen.stdout.trim() === version) {
+      console.log(`skip ${name}@${version}: already published`);
+      continue;
+    }
     // Pre-releases (0.2.0-rc.1) must not become "latest".
     const tag = version.includes("-") ? ["--tag", "next"] : [];
-    const r = spawnSync("npm", ["publish", "--access", "public", "--provenance", ...tag], { cwd: path.join(out, d), stdio: "inherit" });
-    if (r.status !== 0) process.exit(r.status ?? 1);
+    const r = spawnSync("npm", ["publish", "--access", "public", "--provenance", ...tag], { cwd: path.join(out, d), encoding: "utf8" });
+    process.stdout.write(r.stdout || "");
+    process.stderr.write(r.stderr || "");
+    if (r.status === 0) continue;
+    if (/cannot publish over|previously published|already (been )?(published|staged|submitted)/i.test(r.stderr || "")) {
+      console.log(`skip ${name}@${version}: already published or staged`);
+      continue;
+    }
+    // Keep going, so one refused name does not block the others.
+    failed.push(name);
+  }
+  if (failed.length) {
+    console.error(`failed: ${failed.join(", ")}`);
+    process.exit(1);
   }
 }
 
