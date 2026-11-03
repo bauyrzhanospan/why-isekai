@@ -21,6 +21,9 @@ Usage:
   isekai init [--mode warn|block] [--claude] [--mcp]
                                                install git hooks, config, AGENTS.md line
   isekai brief [-n N] [--format text|md|json]  summary for the start of a session
+  isekai stats [--format text|json]            numbers for humans: agents, open work, growth, level
+  isekai dashboard [-o FILE] [--look L] [--open]
+                                               one offline HTML page with those numbers
   isekai check [<range>] [--strict] [--format text|json]
                                                validate commits (for CI)
   isekai run [--scope S] [--as NAME] -- <cmd>  run cmd with secret:// env vars resolved,
@@ -58,6 +61,10 @@ func run(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 		err = cmdInit(rest, stdout)
 	case "brief":
 		err = cmdBrief(rest, stdout)
+	case "stats":
+		err = cmdStats(rest, stdout)
+	case "dashboard":
+		err = cmdDashboard(rest, stdout)
 	case "check":
 		code, err = cmdCheck(rest, stdout)
 	case "hook":

@@ -1,0 +1,97 @@
+<div class="k-page">
+  <header class="k-hud">
+    <div class="k-who">
+      <div class="k-portrait" data-bind-var="--p:level.pct"><span class="k-lv" data-bind="level.level"></span></div>
+      <div class="k-who-text">
+        <div><b class="k-name" data-bind="repo.name"></b> <span class="k-muted">branch <span data-bind="repo.branch"></span></span></div>
+        <div class="k-xp" role="progressbar" aria-label="Experience to next level" aria-valuemin="0" aria-valuemax="100" data-bind-attr="aria-valuenow:level.pct" data-bind-var="--v:level.pct"><i></i></div>
+      </div>
+    </div>
+    <div class="k-counters">
+      <span class="k-chip" title="Commits"><i class="k-gem k-c1"></i><b data-bind="journal.commits"></b> commits</span>
+      <span class="k-chip" title="Commits that explain why"><i class="k-gem k-c2"></i><b data-bind="journal.with_why"></b> whys</span>
+      <span class="k-chip" title="Rejected approaches recorded"><i class="k-gem k-c3"></i><b data-bind="journal.dead_ends"></b> dead ends</span>
+      <span class="k-chip" title="Open work"><i class="k-gem k-c4"></i><b data-bind="journal.open_count"></b> quests</span>
+    </div>
+    <isekai-look-button></isekai-look-button>
+  </header>
+
+  <div class="k-row">
+    <section class="k-panel k-hero" aria-labelledby="k-hero-name">
+      <isekai-hero></isekai-hero>
+      <h1 id="k-hero-name"><template data-each="agents" data-limit="1"><span data-bind=".id"></span></template><span data-if="!agents">Your first agent</span></h1>
+      <span class="k-class">Summoned Engineer · Lv. <span data-bind="level.level"></span></span>
+      <div class="k-xpline"><span>XP <span data-bind="level.xp"></span> / <span data-bind="level.next_xp"></span></span></div>
+      <div class="k-xp" data-bind-var="--v:level.pct"><i></i></div>
+      <span class="k-muted k-small" data-bind="level.rules"></span>
+    </section>
+
+    <section class="k-panel k-status" aria-labelledby="k-status-h">
+      <div class="k-status-head"><h2 id="k-status-h">STATUS</h2><span>Party of <span data-bind="agents"></span></span></div>
+      <div class="k-status-body">
+        <isekai-radar class="k-radar"></isekai-radar>
+        <div class="k-stats">
+          <template data-each="stats.list">
+            <div class="k-stat">
+              <div class="k-stat-top"><span><b data-bind=".abbr"></b> <span class="k-muted" data-bind=".meaning"></span></span><span class="k-num" data-bind=".value"></span></div>
+              <div class="k-meter" data-bind-var="--v:.pct"><i></i></div>
+            </div>
+          </template>
+        </div>
+      </div>
+      <div class="k-achievements">
+        <template data-each="achievements">
+          <div class="k-ach" data-bind-state=".unlocked" data-bind-attr="title:.hint"><isekai-icon data-name="star"></isekai-icon><span><b data-bind=".name"></b><small data-bind=".progress"></small></span></div>
+        </template>
+      </div>
+    </section>
+  </div>
+
+  <section class="k-panel" aria-labelledby="k-gear-h">
+    <div class="k-panel-head"><h2 id="k-gear-h">Equipment</h2><span class="k-muted">each item is an integration</span></div>
+    <div class="k-gear">
+      <template data-each="gear">
+        <div class="k-item" data-bind-state=".equipped">
+          <isekai-icon data-name-from=".id" data-bind-state=".rarity"></isekai-icon>
+          <div>
+            <small class="k-rarity" data-bind-state=".rarity" data-bind=".rarity"></small>
+            <b data-bind=".name"></b>
+            <span class="k-muted" data-bind=".what"></span>
+            <code data-if="!.equipped" data-bind=".how"></code>
+          </div>
+        </div>
+      </template>
+    </div>
+  </section>
+
+  <div class="k-row">
+    <section class="k-panel k-skills-panel" aria-labelledby="k-sk-h">
+      <h2 id="k-sk-h">Skills</h2>
+      <div class="k-skills">
+        <template data-each="skills">
+          <div class="k-skill" data-bind-state=".learned" data-bind-attr="title:.what">
+            <isekai-icon data-name-from=".id"></isekai-icon>
+            <b data-bind=".name"></b>
+            <small data-bind=".key"></small>
+          </div>
+        </template>
+      </div>
+    </section>
+
+    <section class="k-panel k-quests" aria-labelledby="k-q-h">
+      <div class="k-panel-head"><h2 id="k-q-h">Quest board</h2><span class="k-muted"><span data-bind="journal.waiting_for_humans"></span> need your decision</span></div>
+      <p class="k-muted" data-if="!open">No open quests. Agents add them as <code>Next:</code> trailers.</p>
+      <template data-each="open" data-limit="8">
+        <div class="k-quest"><i class="k-diamond"></i><span class="k-grow" data-bind=".text"></span><code data-bind=".commit"></code><b class="k-reward">+20 XP</b></div>
+      </template>
+    </section>
+  </div>
+
+  <section class="k-system" data-if="next_gear" aria-label="System message">
+    <span class="k-system-tag">SYSTEM</span>
+    <p>A new item can be equipped: <b data-bind="next_gear.name"></b> — <span data-bind="next_gear.effect"></span>.</p>
+    <code data-bind="next_gear.how"></code>
+  </section>
+
+  <footer class="k-muted">Every number comes from git trailers (Why, Tried, Next, Done, Agent) and this repository's isekai files. Same data as the Corporate look.</footer>
+</div>

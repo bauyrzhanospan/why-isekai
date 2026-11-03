@@ -46,9 +46,15 @@ type Agents struct {
 	Coauthors []string `toml:"coauthors"`
 }
 
+// UI configures the dashboard.
+type UI struct {
+	Look string `toml:"look"` // isekai, corporate or a skin in .isekai/ui/skins
+}
+
 type Config struct {
 	Log    Log    `toml:"log"`
 	Agents Agents `toml:"agents"`
+	UI     UI     `toml:"ui"`
 }
 
 // Default returns the built-in configuration.
@@ -63,6 +69,7 @@ func Default() Config {
 			ScanCommits:   2000,
 			StaleNextDays: 30,
 		},
+		UI: UI{Look: "isekai"},
 		Agents: Agents{
 			Env: DefaultAgentEnv,
 			Coauthors: []string{
@@ -122,6 +129,10 @@ stale_next_days = 30
 env = [%s]
 # Substrings of Co-Authored-By values that mark a commit as agent-authored.
 coauthors = ["noreply@anthropic.com", "claude", "codex", "openai", "cursor", "copilot", "aider", "devin", "gemini", "jules", "opencode", "cline", "goose"]
+
+[ui]
+# isekai dashboard look: "isekai" (game), "corporate", or a skin in .isekai/ui/skins (docs/skins.md).
+look = "isekai"
 `, string(mode), quoteList(DefaultAgentEnv))
 }
 

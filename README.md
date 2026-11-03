@@ -147,6 +147,21 @@ The action downloads the release binary (no Go needed), checks the pull request'
 
 These guards are seatbelts, not walls: a determined agent can still bypass git hooks. What makes the journal work is that the right path is the easy one: the template, the error that teaches the format, and the brief arriving without being asked for.
 
+## Dashboard for humans
+
+```sh
+isekai stats                 # the numbers in the terminal
+isekai dashboard --open      # one offline HTML page (written to .git/isekai/, never committed)
+isekai stats --format json   # the data contract skins use (docs/skins.md)
+```
+
+The dashboard shows how many agents worked on the project and how much, how many commits explain why, open work and how fast it gets closed, dead ends, growth over the last eight weeks, the wiki and which integrations are set up. It comes in two looks with the same numbers:
+
+- **Isekai**: your agent as an anime hero with a level, a status window, equipment (the integrations), skills, achievements and a quest board.
+- **Corporate**: a plain report.
+
+**Change look** switches between them and writes a prompt you give your agent to build your own look as a skin (see [docs/skins.md](docs/skins.md)). The page loads nothing from the network (Content-Security-Policy `default-src 'none'`), and commit text is always shown as text. "Tokens saved" stays "not measured yet" until the benchmark is published: isekai cannot see your agent's token usage and does not guess.
+
 ## Secrets (spec Module 2, experimental)
 
 The agent knows a secret exists but never sees its value.
@@ -210,6 +225,9 @@ isekai check [<range>] [--strict] [--format text|json]
 isekai run [--scope S] [--as NAME] -- <cmd>
 isekai secrets init | list | set <ref> | rm <ref> | add-recipient <age1…> | rekey
 isekai wiki add <page> "<text>" | list [<page>] | confirm <page> <n> | stale [--days N]
+isekai stats [--format text|json]
+isekai dashboard [-o FILE] [--look isekai|corporate|<skin>] [--open]
+isekai mcp [--repo DIR]
 isekai hook commit-msg | prepare-commit-msg | claude-guard     (called by hooks)
 isekai version
 ```

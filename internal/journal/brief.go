@@ -36,6 +36,7 @@ type OpenItem struct {
 	Date    string `json:"date"`
 	AgeDays int    `json:"age_days"`
 	Stale   bool   `json:"possibly_stale"`
+	opened  time.Time
 }
 
 // WikiPage summarises one wiki page for the brief.
@@ -55,6 +56,10 @@ type Brief struct {
 	Wiki       []WikiPage `json:"wiki,omitempty"`
 	Secrets    []string   `json:"secrets,omitempty"`
 	Untracked  int        `json:"commits_without_why"`
+	// Closed counts Next items closed by Done in the scanned history;
+	// CloseDays sums how long they stayed open.
+	Closed    int     `json:"closed_count"`
+	CloseDays float64 `json:"-"`
 
 	// Inferred from plain git history (useful before anyone writes trailers).
 	RecentNoWhy []CommitLine `json:"recent_without_why,omitempty"`
@@ -118,6 +123,13 @@ func BuildBrief(dir string, cfg config.Config, n int, now time.Time) (Brief, err
 	for i := len(commits) - 1; i >= 0; i-- {
 		c := commits[i]
 		m := Parse(c.Message)
+		ct, _ := time.Parse(time.RFC3339, c.Time)
+		closeOne := func(o OpenItem) {
+			b.Closed++
+			if !o.opened.IsZero() && !ct.IsZero() && ct.After(o.opened) {
+				b.CloseDays += ct.Sub(o.opened).Hours() / 24
+			}
+		}
 		for _, d := range m.Values(KeyDone) {
 			d = strings.TrimSpace(d)
 			if mm := doneRefRe.FindStringSubmatch(d); mm != nil {
@@ -128,6 +140,7 @@ func BuildBrief(dir string, cfg config.Config, n int, now time.Time) (Brief, err
 				for _, o := range open {
 					if !closedByRef && strings.HasPrefix(o.Commit, ref) && o.Index == idx {
 						closedByRef = true
+						closeOne(o)
 						continue
 					}
 					kept = append(kept, o)
@@ -142,6 +155,8 @@ func BuildBrief(dir string, cfg config.Config, n int, now time.Time) (Brief, err
 			for _, o := range open {
 				if normText(o.Text) != key {
 					kept = append(kept, o)
+				} else {
+					closeOne(o)
 				}
 			}
 			open = kept
@@ -153,6 +168,7 @@ func BuildBrief(dir string, cfg config.Config, n int, now time.Time) (Brief, err
 			o := OpenItem{Text: t, Commit: strings.ToLower(c.Hash), Index: j + 1, Date: c.Time}
 			if ts, err := time.Parse(time.RFC3339, c.Time); err == nil {
 				o.Date = ts.Format("2006-01-02")
+				o.opened = ts
 				o.AgeDays = int(now.Sub(ts).Hours() / 24)
 				o.Stale = staleAfter > 0 && o.AgeDays > staleAfter
 			}

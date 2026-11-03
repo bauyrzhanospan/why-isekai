@@ -1,0 +1,85 @@
+body { margin: 0; background: #0D0B1A; color: #EEF1FF; font: 15px/1.45 Inter, system-ui, -apple-system, "Segoe UI", sans-serif; --hero-cape: #6C4BD9; }
+h1, h2, .k-name { font-family: ui-rounded, "SF Pro Rounded", "M PLUS Rounded 1c", system-ui, sans-serif; }
+code { font-family: ui-monospace, "JetBrains Mono", Menlo, Consolas, monospace; font-size: 12px; color: #7DF3FF; }
+.k-page { max-width: 1200px; margin: 0 auto; padding: 24px 24px 48px; display: flex; flex-direction: column; gap: 20px; }
+.k-muted { color: #A7A3D1; }
+.k-small { font-size: 12px; }
+.k-hud { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; background: #151231; border: 1px solid #2E2A5C; border-radius: 18px; padding: 12px 16px; }
+.k-who { display: flex; align-items: center; gap: 12px; flex: 1 1 300px; min-width: 0; }
+.k-portrait { position: relative; width: 52px; height: 52px; border-radius: 50%; flex-shrink: 0;
+  background: conic-gradient(#7DF3FF calc(var(--p, 0) * 1%), #2A2552 0); padding: 3px; box-sizing: border-box; }
+.k-portrait::before { content: ""; display: block; width: 100%; height: 100%; border-radius: 50%; background: #1F1A45; }
+.k-lv { position: absolute; right: -4px; bottom: -4px; min-width: 24px; height: 24px; border-radius: 12px; background: #F0B33C; color: #1B1530; font-weight: 800; font-size: 13px; display: flex; align-items: center; justify-content: center; border: 2px solid #151231; }
+.k-who-text { display: flex; flex-direction: column; gap: 6px; min-width: 0; flex: 1; }
+.k-name { font-size: 18px; }
+.k-xp { height: 8px; background: #2A2552; border-radius: 4px; overflow: hidden; max-width: 340px; width: 100%; }
+.k-xp i { display: block; height: 100%; width: calc(var(--v, 0) * 1%); background: #7DF3FF; border-radius: 4px; }
+.k-counters { display: flex; flex-wrap: wrap; gap: 8px; }
+.k-chip { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 12px; border-radius: 999px; background: #1F1A45; border: 1px solid #2E2A5C; font-size: 14px; color: #A7A3D1; }
+.k-chip b { color: #EEF1FF; }
+.k-gem { width: 10px; height: 10px; border-radius: 2px; transform: rotate(45deg); }
+.k-c1 { background: #7DF3FF; } .k-c2 { background: #F0B33C; } .k-c3 { background: #FF8FB1; } .k-c4 { background: #B57BFF; }
+.k-row { display: flex; flex-wrap: wrap; gap: 20px; align-items: stretch; }
+.k-panel { background: #151231; border: 1px solid #2E2A5C; border-radius: 22px; padding: 20px; display: flex; flex-direction: column; gap: 12px; flex: 1 1 360px; min-width: 0; }
+.k-panel h2 { margin: 0; font-size: 20px; }
+.k-panel-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.k-hero { align-items: center; text-align: center; flex: 1 1 420px; }
+.k-hero h1 { margin: 0; font-size: 22px; }
+isekai-hero { display: block; width: 100%; max-width: 360px; }
+isekai-hero svg { width: 100%; height: auto; display: block; }
+.k-class { color: #7DF3FF; font-weight: 600; font-size: 14px; }
+.k-xpline { width: 100%; display: flex; justify-content: center; font-size: 13px; color: #A7A3D1; }
+.k-hero .k-xp { max-width: none; height: 12px; }
+.k-status { background: #0F1A36; border: 2px solid #4FA8FF; border-radius: 6px; box-shadow: 0 0 0 4px #0D0B1A, 0 0 0 5px #2E5FA8; }
+.k-status-head { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #2E5FA8; padding-bottom: 10px; color: #8FB4E0; font-size: 13px; }
+.k-status-head h2 { letter-spacing: 0.2em; color: #CFE9FF; font-size: 18px; }
+.k-status-body { display: flex; flex-wrap: wrap; gap: 16px; align-items: center; }
+.k-radar { flex: 0 0 220px; max-width: 100%; }
+.k-radar svg { width: 100%; height: auto; display: block; }
+.radar-grid { fill: none; stroke: #2E5FA8; stroke-width: 1; }
+.radar-value { fill: rgba(125, 243, 255, 0.3); stroke: #7DF3FF; stroke-width: 2; }
+.radar-label { fill: #CFE9FF; font: 600 11px Inter, system-ui, sans-serif; }
+.k-stats { flex: 1 1 180px; min-width: 0; display: flex; flex-direction: column; gap: 10px; }
+.k-stat-top { display: flex; justify-content: space-between; gap: 8px; font-size: 13px; color: #CFE9FF; }
+.k-stat-top .k-muted { color: #8FB4E0; }
+.k-num { font-family: ui-monospace, Menlo, monospace; }
+.k-meter { height: 6px; background: #1C2C55; border-radius: 3px; overflow: hidden; }
+.k-meter i { display: block; height: 100%; width: calc(var(--v, 0) * 1%); background: #7DF3FF; }
+.k-achievements { display: flex; flex-wrap: wrap; gap: 10px; border-top: 1px solid #2E5FA8; padding-top: 12px; }
+.k-ach { display: flex; gap: 8px; align-items: center; padding: 8px 12px; border-radius: 10px; border: 1px dashed #2E5FA8; opacity: 0.75; color: #3A3566; }
+.k-ach span { display: flex; flex-direction: column; color: #EEF1FF; font-size: 13px; }
+.k-ach small { color: #8FB4E0; font-size: 12px; }
+.k-ach[data-state="true"] { opacity: 1; background: #2A2410; border: 1px solid #7F5F19; color: #F0B33C; }
+isekai-icon { display: inline-flex; width: 22px; height: 22px; flex-shrink: 0; }
+isekai-icon svg { width: 100%; height: 100%; }
+.k-gear { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px; }
+.k-item { display: flex; gap: 14px; align-items: center; min-height: 84px; padding: 12px; border-radius: 16px; background: #121029; border: 2px dashed #3A3566; }
+.k-item > div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.k-item b { font-size: 15px; }
+.k-item .k-muted { font-size: 13px; }
+.k-item isekai-icon { width: 56px; height: 56px; padding: 13px; box-sizing: border-box; border-radius: 14px; background: #1A1736; color: #5F5A92; border: 1px dashed #3A3566; }
+.k-item[data-state="true"] { background: #1F1A45; border: 2px solid #4FA8FF; }
+.k-item[data-state="true"] isekai-icon { border-style: solid; }
+.k-rarity { font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #A7A3D1; }
+.k-item[data-state="true"] .k-rarity[data-state="legendary"], .k-item[data-state="true"] isekai-icon[data-state="legendary"] { color: #F0B33C; }
+.k-item[data-state="true"] .k-rarity[data-state="epic"], .k-item[data-state="true"] isekai-icon[data-state="epic"] { color: #B57BFF; }
+.k-item[data-state="true"] .k-rarity[data-state="rare"], .k-item[data-state="true"] isekai-icon[data-state="rare"] { color: #4FA8FF; }
+.k-item[data-state="true"] isekai-icon { background: rgba(125, 243, 255, 0.08); border-color: currentColor; }
+.k-item[data-state="false"] .k-rarity { color: #5F5A92; }
+.k-skills { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.k-skill { display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; font-size: 13px; opacity: 0.55; }
+.k-skill isekai-icon { width: 60px; height: 60px; padding: 15px; box-sizing: border-box; border-radius: 50%; background: #1A1736; color: #5F5A92; border: 2px dashed #3A3566; }
+.k-skill[data-state="true"] { opacity: 1; }
+.k-skill[data-state="true"] isekai-icon { color: #7DF3FF; border: 2px solid #7DF3FF; background: rgba(125, 243, 255, 0.12); box-shadow: 0 0 12px rgba(125, 243, 255, 0.35); }
+.k-skill small { color: #A7A3D1; font-weight: 700; }
+.k-quests { flex: 999 1 520px; }
+.k-quest { display: flex; gap: 12px; align-items: center; padding: 12px 14px; border-radius: 14px; background: #1F1A45; border: 1px solid #2E2A5C; font-size: 14px; }
+.k-grow { flex: 1 1 auto; min-width: 0; }
+.k-diamond { width: 10px; height: 10px; transform: rotate(45deg); background: #F0B33C; flex-shrink: 0; }
+.k-reward { color: #7DF3FF; font-size: 13px; white-space: nowrap; }
+.k-system { display: flex; flex-direction: column; gap: 8px; background: #0F1A36; border: 2px solid #4FA8FF; border-radius: 6px; padding: 16px; box-shadow: 0 0 0 4px #0D0B1A, 0 0 0 5px #2E5FA8; }
+.k-system p { margin: 0; }
+.k-system-tag { font-weight: 800; letter-spacing: 0.2em; font-size: 13px; color: #7DF3FF; }
+footer { font-size: 12px; border-top: 1px solid #2E2A5C; padding-top: 16px; }
+.isekai-look-button { font: inherit; font-size: 14px; font-weight: 700; min-height: 44px; padding: 0 16px; border-radius: 12px; border: none; background: #F0B33C; color: #1B1530; cursor: pointer; }
+.k-page > .k-panel { flex: none; }

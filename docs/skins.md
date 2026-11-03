@@ -1,6 +1,6 @@
 # Skins: how an agent changes the isekai interface
 
-> Status: design for roadmap task 22. The commands below are the planned interface; they do not exist in v0.1 yet.
+> Status: `isekai stats --format json`, `isekai dashboard` with the built-in looks and the binding runtime exist. `isekai ui new | check | use` are roadmap task 22; until then, create the folder by hand and select it with `[ui] look = "<name>"` in `.isekai/config.toml` or `isekai dashboard --look <name>`.
 
 The dashboard (`isekai dashboard`) shows the same data in any look: a game hero, a corporate report, a MOBA-style HUD, a terminal, whatever a developer wants. A look is a **skin**: a small folder of HTML and CSS. The `isekai` program never calls an LLM, so it does not design skins itself. Instead the developer describes the look to **their own agent**, and the agent follows this page to build, check and apply it.
 

@@ -67,7 +67,7 @@ func (b *Brief) warm(root string, window []gitx.Commit, cfg config.Config) {
 			inner := strings.TrimSuffix(strings.TrimPrefix(m.Subject, `Revert "`), `"`)
 			b.DeadEnds = append(b.DeadEnds, DeadEnd{Commit: c.Short, Tried: "reverted: " + inner, Inferred: true})
 		}
-		if name := agentOf(m, cfg); name != "" {
+		if name := AgentOf(m, cfg); name != "" {
 			agents[name]++
 		}
 	}
@@ -88,8 +88,8 @@ func (b *Brief) warm(root string, window []gitx.Commit, cfg config.Config) {
 	b.Todos = recentTodos(root, n)
 }
 
-// agentOf names the agent that made a commit, from trailers only.
-func agentOf(m Message, cfg config.Config) string {
+// AgentOf names the agent that made a commit, from trailers only.
+func AgentOf(m Message, cfg config.Config) string {
 	if v := m.Values(KeyAgent); len(v) > 0 && strings.TrimSpace(v[0]) != "" {
 		return strings.TrimSpace(v[0])
 	}

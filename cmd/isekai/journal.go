@@ -15,6 +15,7 @@ import (
 	"github.com/bauyrzhanospan/why-isekai/internal/install"
 	"github.com/bauyrzhanospan/why-isekai/internal/journal"
 	"github.com/bauyrzhanospan/why-isekai/internal/secrets"
+	"github.com/bauyrzhanospan/why-isekai/internal/stats"
 	"github.com/bauyrzhanospan/why-isekai/internal/wiki"
 )
 
@@ -109,7 +110,62 @@ func cmdBrief(args []string, out io.Writer) error {
 	if refs, err := secrets.AgentVisibleRefs(root, agentName()); err == nil {
 		b.Secrets = refs
 	}
+	stats.CountBrief(root)
 	return b.Render(out, *format)
+}
+
+func cmdStats(args []string, out io.Writer) error {
+	fs := newFlags("stats")
+	format := fs.String("format", "text", "text or json")
+	if err := fs.Parse(args); err != nil {
+		return fmt.Errorf("stats: %v (usage: isekai stats [--format text|json])", err)
+	}
+	root, err := repoRoot()
+	if err != nil {
+		return err
+	}
+	cfg, err := config.Load(root)
+	if err != nil {
+		return err
+	}
+	s, err := stats.Build(root, cfg, time.Now())
+	if err != nil {
+		return err
+	}
+	if *format == "json" {
+		enc := json.NewEncoder(out)
+		enc.SetIndent("", "  ")
+		return enc.Encode(s)
+	}
+	j := s.Journal
+	p := func(f string, a ...any) { fmt.Fprintf(out, f+"\n", a...) }
+	p("isekai stats — %s (%s)", s.Repo.Name, s.Repo.Branch)
+	p("level        %d (%d/%d XP; %s)", s.Level.Level, s.Level.XP, s.Level.NextXP, s.Level.Rules)
+	p("commits      %d; with Why %d (%d%%); passing the check %d%%", j.Commits, j.WithWhy, j.WhyPct, j.PassingPct)
+	p("dead ends    %d recorded", j.DeadEnds)
+	avg := "n/a"
+	if j.AvgCloseDays != nil {
+		avg = fmt.Sprintf("%.1f days", *j.AvgCloseDays)
+	}
+	p("open work    %d open, %d closed (avg %s), oldest %d days, %d waiting for humans", j.OpenCount, j.Closed, avg, j.OldestOpenDays, j.WaitingForHumans)
+	var ag []string
+	for _, a := range s.Agents {
+		ag = append(ag, fmt.Sprintf("%s %d", a.ID, a.Commits))
+	}
+	if len(ag) == 0 {
+		ag = []string{"none"}
+	}
+	p("agents       %s; humans %d commits", strings.Join(ag, ", "), s.Humans.Commits)
+	p("growth       %d active days, %d files, +%d lines", s.Growth.ActiveDays, s.Growth.Files, s.Growth.LinesAdded)
+	var eq []string
+	for _, g := range s.Gear {
+		if g.Equipped {
+			eq = append(eq, g.Name)
+		}
+	}
+	p("equipped     %s", strings.Join(eq, ", "))
+	p("briefs       %d served in this clone; tokens saved: not measured yet", s.TokensSaved.BriefsServed)
+	return nil
 }
 
 type checkedCommit struct {

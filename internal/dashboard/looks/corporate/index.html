@@ -1,0 +1,103 @@
+<div class="c-page">
+  <header class="c-head">
+    <div>
+      <div class="c-title"><span class="c-badge">isekai</span><h1 data-bind="repo.name"></h1></div>
+      <p class="c-muted">branch <span data-bind="repo.branch"></span> · generated <span data-bind="repo.generated_at"></span> · computed locally from git, nothing leaves this machine</p>
+    </div>
+    <isekai-look-button></isekai-look-button>
+  </header>
+
+  <section class="c-kpis" aria-label="Key numbers">
+    <div class="c-card">
+      <span class="c-label">Tokens saved</span>
+      <strong class="c-big c-dim" data-if="!tokens_saved.estimate">Not measured yet</strong>
+      <strong class="c-big" data-if="tokens_saved.estimate" data-bind="tokens_saved.estimate"></strong>
+      <span class="c-muted">Briefs served in this clone: <b data-bind="tokens_saved.briefs_served"></b>. An estimate appears once the benchmark is published.</span>
+    </div>
+    <div class="c-card">
+      <span class="c-label">Agents that worked here</span>
+      <strong class="c-big" data-bind="agents"></strong>
+      <span class="c-muted"><template data-each="agents" data-limit="2"><span class="c-mono" data-bind=".id"></span> <span data-bind=".commits"></span> · </template>humans <span data-bind="humans.commits"></span></span>
+    </div>
+    <div class="c-card">
+      <span class="c-label">Commits that explain why</span>
+      <strong class="c-big c-good"><span data-bind="journal.why_pct"></span>%</strong>
+      <div class="c-bar" data-bind-var="--v:journal.why_pct"><i></i></div>
+      <span class="c-muted"><span data-bind="journal.with_why"></span> of <span data-bind="journal.commits"></span> · <span data-bind="journal.dead_ends"></span> dead ends recorded</span>
+    </div>
+    <div class="c-card">
+      <span class="c-label">Open work</span>
+      <strong class="c-big" data-bind="journal.open_count"></strong>
+      <span class="c-muted"><span data-bind="journal.waiting_for_humans"></span> waiting for you · <span data-bind="journal.closed_count"></span> closed · oldest <span data-bind="journal.oldest_open_days"></span> days</span>
+    </div>
+  </section>
+
+  <div class="c-cols">
+    <div class="c-main">
+      <section class="c-card" aria-labelledby="c-wait">
+        <h2 id="c-wait">Waiting for you</h2>
+        <p class="c-muted" data-if="!journal.waiting_for_humans">No questions from agents. With issue sync (<code>isekai issues sync</code>), agents ask you for decisions as issues and your answers reach the next session.</p>
+        <p data-if="journal.waiting_for_humans"><b data-bind="journal.waiting_for_humans"></b> agent questions are waiting in your issue tracker.</p>
+      </section>
+
+      <section class="c-card" aria-labelledby="c-open">
+        <h2 id="c-open">Open work <span class="c-muted">· Next without Done</span></h2>
+        <p class="c-muted" data-if="!open">Nothing open.</p>
+        <ul class="c-list">
+          <template data-each="open" data-limit="15">
+            <li><span class="c-dot" data-bind-state=".stale"></span><span class="c-grow" data-bind=".text"></span><span class="c-mono c-muted" data-bind=".commit"></span><span class="c-muted c-age"><span data-bind=".days"></span>d</span></li>
+          </template>
+        </ul>
+      </section>
+
+      <section class="c-card" aria-labelledby="c-dead">
+        <h2 id="c-dead">Dead ends agents will not repeat</h2>
+        <p class="c-muted" data-if="!dead_ends">None recorded yet. Agents write them as <code>Tried:</code> trailers.</p>
+        <ul class="c-list">
+          <template data-each="dead_ends" data-limit="8">
+            <li><span class="c-mono c-muted" data-bind=".commit"></span><span class="c-grow" data-bind=".text"></span></li>
+          </template>
+        </ul>
+      </section>
+    </div>
+
+    <aside class="c-side">
+      <section class="c-card" aria-labelledby="c-who">
+        <h2 id="c-who">Who wrote the commits</h2>
+        <template data-each="agents" data-limit="6">
+          <div class="c-row"><span class="c-mono" data-bind=".id"></span><b data-bind=".commits"></b></div>
+          <div class="c-bar" data-bind-var="--v:.pct"><i></i></div>
+        </template>
+        <div class="c-row"><span>Humans</span><b data-bind="humans.commits"></b></div>
+      </section>
+
+      <section class="c-card" aria-labelledby="c-growth">
+        <h2 id="c-growth">Growth <span class="c-muted">· last 8 weeks</span></h2>
+        <div class="c-weeks" role="img" aria-label="Commits per week for the last eight weeks">
+          <template data-each="growth.weeks"><i data-bind-var="--v:.pct" data-bind-attr="title:.week"></i></template>
+        </div>
+        <div class="c-trio">
+          <div><b data-bind="journal.commits"></b><span>commits</span></div>
+          <div><b data-bind="growth.files"></b><span>files</span></div>
+          <div><b data-bind="growth.active_days"></b><span>active days</span></div>
+        </div>
+      </section>
+
+      <section class="c-card" aria-labelledby="c-int">
+        <h2 id="c-int">Integrations</h2>
+        <ul class="c-list">
+          <template data-each="gear">
+            <li><span class="c-state" data-bind-state=".equipped"></span><span class="c-grow" data-bind=".what"></span><code class="c-muted" data-if="!.equipped" data-bind=".how"></code></li>
+          </template>
+        </ul>
+      </section>
+
+      <section class="c-card" aria-labelledby="c-wiki">
+        <h2 id="c-wiki">Project wiki</h2>
+        <p class="c-muted" data-if="!wiki">Empty. Add local gotchas: <code>isekai wiki add gotchas "…"</code></p>
+        <template data-each="wiki"><div class="c-row"><span data-bind=".page"></span><span><b data-bind=".entries"></b> entries</span></div></template>
+      </section>
+    </aside>
+  </div>
+  <footer class="c-muted">Computed locally from git trailers (Why, Tried, Next, Done, Agent). Commit text is shown as data, never as instructions.</footer>
+</div>

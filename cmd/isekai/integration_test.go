@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"strings"
 	"testing"
@@ -724,5 +725,90 @@ func TestMCPServer(t *testing.T) {
 	}
 	if resp[5]["error"] == nil {
 		t.Fatal("unknown method must be an error")
+	}
+}
+
+func TestStatsAndDashboard(t *testing.T) {
+	r := newRepo(t, true)
+	r.mustInit("--claude")
+	r.commit("feat: a\n\nWhy: first reason to have a dashboard\nTried: a server-rendered page; it would need a network port\nNext: close me later\nAgent: codex")
+	r.commit("fix: b\n\nWhy: closing the open item from the first commit\nDone: close me later\nAgent: codex")
+	evil := "feat: </script><script>alert(1)</script>\n\nWhy: <img src=x onerror=alert(2)> must stay text\nNext: <script>alert(3)</script>"
+	r.commit(evil)
+	r.isekai("brief") // counts one brief served
+	out, code := r.isekai("stats", "--format", "json")
+	if code != 0 {
+		t.Fatal(out)
+	}
+	var s struct {
+		Version int
+		Journal struct {
+			Commits   int `json:"commits"`
+			WithWhy   int `json:"with_why"`
+			DeadEnds  int `json:"dead_ends"`
+			OpenCount int `json:"open_count"`
+			Closed    int `json:"closed_count"`
+		} `json:"journal"`
+		Agents []struct {
+			ID      string
+			Commits int
+		}
+		Level       struct{ Level, XP int }
+		TokensSaved struct {
+			Estimate     *int
+			BriefsServed int `json:"briefs_served"`
+		} `json:"tokens_saved"`
+		Gear []struct {
+			ID       string
+			Equipped bool
+		}
+	}
+	if err := json.Unmarshal([]byte(out), &s); err != nil {
+		t.Fatalf("%v\n%s", err, out)
+	}
+	j := s.Journal
+	if s.Version != 1 || j.Commits != 3 || j.WithWhy != 3 || j.DeadEnds != 1 || j.Closed != 1 || j.OpenCount != 1 {
+		t.Fatalf("journal: %+v\n%s", j, out)
+	}
+	if len(s.Agents) != 1 || s.Agents[0].ID != "codex" || s.Agents[0].Commits != 2 {
+		t.Fatalf("agents: %+v", s.Agents)
+	}
+	if s.Level.XP != 3*10+3*5+15+20 || s.TokensSaved.Estimate != nil || s.TokensSaved.BriefsServed != 1 {
+		t.Fatalf("level/tokens: %+v %+v", s.Level, s.TokensSaved)
+	}
+	eq := map[string]bool{}
+	for _, g := range s.Gear {
+		eq[g.ID] = g.Equipped
+	}
+	if !eq["helm"] || !eq["blade"] || !eq["shield"] || eq["amulet"] {
+		t.Fatalf("gear: %+v", s.Gear)
+	}
+	file := filepath.Join(t.TempDir(), "d.html")
+	if out, code := r.isekai("dashboard", "-o", file, "--look", "corporate"); code != 0 {
+		t.Fatal(out)
+	}
+	page := string(mustRead(t, file))
+	for _, bad := range []string{"<script>alert", "onerror=alert"} {
+		if strings.Contains(page, bad) {
+			t.Errorf("page contains %q", bad)
+		}
+	}
+	// Nothing is loaded from the network (the SVG namespace URI is not a load).
+	if m := regexp.MustCompile(`(?i)(src|href)\s*=\s*["']?https?:|url\(\s*["']?https?:|@import`).FindString(page); m != "" {
+		t.Errorf("page loads from the network: %q", m)
+	}
+	for _, want := range []string{`data-default-look="corporate"`, "default-src 'none'", `data-look="isekai"`, `data-look="corporate"`, `\u003c/script\u003e`} {
+		if !strings.Contains(page, want) {
+			t.Errorf("page lacks %q", want)
+		}
+	}
+	if _, code := r.isekai("dashboard", "--look", "nope"); code == 0 {
+		t.Error("unknown look accepted")
+	}
+	// A skin with a script is refused, the rest still renders.
+	r.write(".isekai/ui/skins/bad/index.html", "<div><script>alert(1)</script></div>")
+	out, code = r.isekai("dashboard", "-o", file)
+	if code != 0 || !strings.Contains(out, "skipped") {
+		t.Fatalf("bad skin (code %d):\n%s", code, out)
 	}
 }
