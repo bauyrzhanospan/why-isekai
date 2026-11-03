@@ -142,8 +142,8 @@ const chrome = `
 [hidden] { display: none !important; }
 `
 
-// Render writes the page. defaultLook is used unless the viewer picked one
-// before in this browser; force ignores the viewer's earlier choice.
+// Render writes the page. defaultLook is used unless the viewer picked another
+// look in this browser while the same default was set; force ignores that pick.
 func Render(w io.Writer, s stats.Stats, looks []Look, defaultLook string, force bool) error {
 	data, err := json.Marshal(s) // escapes <, > and & so it cannot close the script tag
 	if err != nil {
