@@ -49,3 +49,34 @@ release:
   github:
     owner: bauyrzhanospan
     name: why-isekai
+
+# Homebrew tap and Scoop bucket (roadmap task 11). They publish only when
+# the tokens exist, so a release without them still succeeds.
+#   brew install bauyrzhanospan/tap/why-isekai
+#   scoop bucket add why-isekai https://github.com/bauyrzhanospan/scoop-bucket && scoop install why-isekai
+brews:
+  - name: why-isekai
+    repository:
+      owner: bauyrzhanospan
+      name: homebrew-tap
+      token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
+    skip_upload: '{{ if index .Env "HOMEBREW_TAP_TOKEN" }}false{{ else }}true{{ end }}'
+    directory: Formula
+    homepage: https://github.com/bauyrzhanospan/why-isekai
+    description: Project memory for AI agents, kept in git
+    license: MIT
+    install: |
+      bin.install "isekai"
+    test: |
+      system "#{bin}/isekai", "version"
+
+scoops:
+  - name: why-isekai
+    repository:
+      owner: bauyrzhanospan
+      name: scoop-bucket
+      token: "{{ .Env.SCOOP_BUCKET_TOKEN }}"
+    skip_upload: '{{ if index .Env "SCOOP_BUCKET_TOKEN" }}false{{ else }}true{{ end }}'
+    homepage: https://github.com/bauyrzhanospan/why-isekai
+    description: Project memory for AI agents, kept in git
+    license: MIT

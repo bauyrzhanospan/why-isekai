@@ -38,6 +38,8 @@ The format is an open spec: [SPEC.md](SPEC.md) in English, [SPEC.ru.md](SPEC.ru.
 |---|---|
 | Go | `go install github.com/bauyrzhanospan/why-isekai/cmd/isekai@latest` |
 | Script (Linux, macOS, Git Bash) | `curl -fsSL https://raw.githubusercontent.com/bauyrzhanospan/why-isekai/main/install.sh \| sh` |
+| Homebrew | `brew install bauyrzhanospan/tap/why-isekai` (after the tap repository exists) |
+| Scoop | `scoop bucket add why-isekai https://github.com/bauyrzhanospan/scoop-bucket; scoop install why-isekai` |
 | PowerShell | `irm https://raw.githubusercontent.com/bauyrzhanospan/why-isekai/main/install.ps1 \| iex` |
 | npm | `npm i -g why-isekai` or, per project, `npm i -D why-isekai` |
 | PyPI | `pipx install why-isekai` · `uv tool install why-isekai` · `pip install why-isekai` |
