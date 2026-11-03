@@ -51,10 +51,21 @@ type UI struct {
 	Look string `toml:"look"` // isekai, corporate or a skin in .isekai/ui/skins
 }
 
+// Issues configures the issue tracker mirror (isekai issues sync).
+type Issues struct {
+	Enabled       bool   `toml:"enabled"`        // the GitHub Action syncs automatically
+	Tracker       string `toml:"tracker"`        // github (more adapters later)
+	Repo          string `toml:"repo"`           // owner/repo; default: from the git remote
+	OpenFor       string `toml:"open_for"`       // all | marked ("Next: [issue] ...")
+	NextLabel     string `toml:"next_label"`     // label for open work
+	DecisionLabel string `toml:"decision_label"` // label for agents' questions
+}
+
 type Config struct {
 	Log    Log    `toml:"log"`
 	Agents Agents `toml:"agents"`
 	UI     UI     `toml:"ui"`
+	Issues Issues `toml:"issues"`
 }
 
 // Default returns the built-in configuration.
@@ -69,7 +80,8 @@ func Default() Config {
 			ScanCommits:   2000,
 			StaleNextDays: 30,
 		},
-		UI: UI{Look: "isekai"},
+		UI:     UI{Look: "isekai"},
+		Issues: Issues{Tracker: "github", OpenFor: "all", NextLabel: "isekai:next", DecisionLabel: "decision"},
 		Agents: Agents{
 			Env: DefaultAgentEnv,
 			Coauthors: []string{
@@ -129,6 +141,15 @@ stale_next_days = 30
 env = [%s]
 # Substrings of Co-Authored-By values that mark a commit as agent-authored.
 coauthors = ["noreply@anthropic.com", "claude", "codex", "openai", "cursor", "copilot", "aider", "devin", "gemini", "jules", "opencode", "cline", "goose"]
+
+[issues]
+# Mirror open work (Next) into issues and read humans' answers back: isekai issues sync.
+# enabled = true makes the GitHub Action sync on every push to the default branch.
+enabled = false
+tracker = "github"
+open_for = "all"            # all | marked (only "Next: [issue] ...")
+next_label = "isekai:next"
+decision_label = "decision" # agents ask with: isekai issues ask "<question>"
 
 [ui]
 # isekai dashboard look: "isekai" (game), "corporate", or a skin in .isekai/ui/skins (docs/skins.md).

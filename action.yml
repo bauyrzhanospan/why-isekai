@@ -25,6 +25,10 @@ inputs:
     description: Write the result to the job summary.
     required: false
     default: "true"
+  sync-issues:
+    description: On pushes, mirror open work into GitHub issues when .isekai/config.toml has [issues] enabled = true. Needs `permissions: issues: write`.
+    required: false
+    default: "true"
 outputs:
   failed:
     description: Number of failing commits.
@@ -52,3 +56,11 @@ runs:
         AFTER: ${{ github.sha }}
         ACTION_PATH: ${{ github.action_path }}
       run: bash "$ACTION_PATH/.github/action/check.sh"
+    - name: Sync issues
+      if: ${{ always() && inputs.sync-issues == 'true' && github.event_name == 'push' }}
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        PATH="${RUNNER_TEMP:-/tmp}/isekai-bin:$PATH"
+        isekai issues sync --if-enabled

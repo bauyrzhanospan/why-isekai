@@ -16,6 +16,7 @@ import (
 	"github.com/bauyrzhanospan/why-isekai/internal/journal"
 	"github.com/bauyrzhanospan/why-isekai/internal/secrets"
 	"github.com/bauyrzhanospan/why-isekai/internal/stats"
+	"github.com/bauyrzhanospan/why-isekai/internal/tracker"
 	"github.com/bauyrzhanospan/why-isekai/internal/wiki"
 )
 
@@ -110,6 +111,7 @@ func cmdBrief(args []string, out io.Writer) error {
 	if refs, err := secrets.AgentVisibleRefs(root, agentName()); err == nil {
 		b.Secrets = refs
 	}
+	tracker.ApplyCache(root, &b)
 	stats.CountBrief(root)
 	return b.Render(out, *format)
 }

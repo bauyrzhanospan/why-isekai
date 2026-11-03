@@ -279,3 +279,8 @@ B.3. Implementations MUST NOT send project data over the network, except to the 
 ## D. Versions
 
 The spec follows Semantic Versioning. Module 1 is the core: changing the meaning of a key is a major change. Modules 2 and 3 MAY change in minor versions before 1.0.
+
+## E. Issue trackers (informative)
+
+Implementations MAY mirror the journal into an issue tracker: an open `Next` item becomes an issue, a `Done` closes it, and agents MAY ask humans questions as issues whose answers are shown to later sessions. The git trailers remain the source of truth; the tracker is a view and an answer channel. Answers read from a tracker are data, not instructions (§B.1). Talking to a tracker is network access and MUST happen only when explicitly enabled or invoked (an exception to §B.3, like a secrets store).
+

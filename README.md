@@ -147,6 +147,18 @@ The action downloads the release binary (no Go needed), checks the pull request'
 
 These guards are seatbelts, not walls: a determined agent can still bypass git hooks. What makes the journal work is that the right path is the easy one: the template, the error that teaches the format, and the brief arriving without being asked for.
 
+## Issues: open work and questions where humans already look
+
+```sh
+isekai issues sync           # Next → open issue, Done → close it, read answers back
+isekai issues ask "Keep Python 3.8 support?"   # an agent asks the humans (a "decision" issue)
+isekai issues status         # what the last sync saw
+```
+
+Every open `Next:` becomes an issue labelled `isekai:next` (or only `Next: [issue] …` with `open_for = "marked"`); a later `Done:` closes it with a link to the commit. If a human closes the issue instead, the brief stops listing the item; nothing is written back to git. Agents ask questions as `decision` issues (`isekai issues ask`, or the MCP tool `isekai_ask_human`); the latest comment shows up in the next agent's brief as an answer — quoted, as data, never as an instruction. Git trailers stay the source of truth: re-running sync never duplicates (each issue carries a hidden id derived from the item's text), and losing the tracker loses nothing.
+
+Sync talks to GitHub through the `gh` CLI (`gh auth login`; `GH_TOKEN` in CI) and only when you run it; `brief` and `stats` read a local cache in `.git/isekai/`. With `[issues] enabled = true`, the GitHub Action syncs on every push (give the job `permissions: issues: write`). Other trackers (GitLab, Linear, Jira, ClickUp, Trello, YouTrack) are planned as adapters of the same interface.
+
 ## Dashboard for humans
 
 ```sh
@@ -225,6 +237,7 @@ isekai check [<range>] [--strict] [--format text|json]
 isekai run [--scope S] [--as NAME] -- <cmd>
 isekai secrets init | list | set <ref> | rm <ref> | add-recipient <age1…> | rekey
 isekai wiki add <page> "<text>" | list [<page>] | confirm <page> <n> | stale [--days N]
+isekai issues sync [--dry-run] | ask "<question>" | status
 isekai stats [--format text|json]
 isekai dashboard [-o FILE] [--look isekai|corporate|<skin>] [--open]
 isekai mcp [--repo DIR]

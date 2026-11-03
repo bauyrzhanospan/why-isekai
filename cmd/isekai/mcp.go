@@ -70,6 +70,8 @@ var mcpTools = []mcpTool{
 			"text":   map[string]any{"type": "string", "description": "one thought, one line"},
 			"commit": map[string]any{"type": "string", "description": "related commit (optional)"},
 		}, "page", "text")},
+	{"isekai_ask_human", "Ask the project's humans a question you cannot decide yourself (opens a 'decision' issue in the tracker). Their answer appears in isekai_brief after the next sync. Use for real decisions only, one question per call.",
+		obj(map[string]any{"question": map[string]any{"type": "string"}}, "question")},
 	{"isekai_secrets_list", "List secret references (secret://scope/name) this agent may use with `isekai run -- <command>`. Values are never shown.",
 		obj(map[string]any{})},
 }
@@ -214,6 +216,15 @@ func mcpCall(name string, a map[string]any) (string, bool) {
 			os.Setenv("ISEKAI_AGENT", "mcp-client")
 		}
 		code, err = cmdWiki(args, &out, &errb)
+	case "isekai_ask_human":
+		q := argStr(a, "question")
+		if strings.TrimSpace(q) == "" {
+			return "question is required", true
+		}
+		if agentName() == "" {
+			os.Setenv("ISEKAI_AGENT", "mcp-client")
+		}
+		code, err = cmdIssues([]string{"ask", q}, &out)
 	case "isekai_secrets_list":
 		if agentName() == "" {
 			os.Setenv("ISEKAI_AGENT", "mcp-client")

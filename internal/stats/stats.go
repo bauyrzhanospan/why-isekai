@@ -19,6 +19,7 @@ import (
 	"github.com/bauyrzhanospan/why-isekai/internal/gitx"
 	"github.com/bauyrzhanospan/why-isekai/internal/journal"
 	"github.com/bauyrzhanospan/why-isekai/internal/secrets"
+	"github.com/bauyrzhanospan/why-isekai/internal/tracker"
 	"github.com/bauyrzhanospan/why-isekai/internal/wiki"
 )
 
@@ -273,6 +274,7 @@ func Build(root string, cfg config.Config, now time.Time) (Stats, error) {
 	if err != nil {
 		return s, err
 	}
+	tracker.ApplyCache(root, &b)
 	j.OpenCount = len(b.Open)
 	j.Closed = b.Closed
 	if b.Closed > 0 {
