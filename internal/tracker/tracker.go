@@ -35,6 +35,9 @@ type Comment struct {
 	Author  string
 	Body    string
 	Created string
+	// Maintainer is true when the author can write to the repository. On a
+	// public repository anyone can comment, and agents read the answer.
+	Maintainer bool
 }
 
 // Adapter is what a tracker must provide.
@@ -50,6 +53,16 @@ type Adapter interface {
 var markerRe = regexp.MustCompile(`<!-- isekai:next id=([0-9a-f]{12}) -->`)
 
 func marker(id string) string { return "<!-- isekai:next id=" + id + " -->" }
+
+// doneComment starts the comment isekai leaves when a Done closes an issue.
+const doneComment = "Done in commit "
+
+// closedByDone reports whether isekai closed the issue because of a Done
+// trailer (rather than a person closing it as "won't do").
+func closedByDone(is Issue) bool {
+	n := len(is.Comments)
+	return n > 0 && strings.HasPrefix(is.Comments[n-1].Body, doneComment)
+}
 
 // Action is one change sync made (or would make with dry run).
 type Action struct {
@@ -118,12 +131,15 @@ func Sync(root string, cfg config.Config, a Adapter, o Options) ([]Action, Cache
 		id := journal.ItemID(it.Text)
 		openIDs[id] = true
 		is, ok := byID[id]
-		if ok {
-			if !is.Open {
-				cache.ClosedByHumans = append(cache.ClosedByHumans, id)
-			}
+		if ok && is.Open {
 			continue
 		}
+		if ok && !closedByDone(is) {
+			cache.ClosedByHumans = append(cache.ClosedByHumans, id)
+			continue
+		}
+		// Not tracked yet, or closed earlier by a Done and now written as a
+		// Next again: that is new open work, so it gets a new issue.
 		text := strings.TrimSpace(it.Text)
 		if ic.OpenFor == "marked" {
 			if !strings.HasPrefix(strings.ToLower(text), "[issue]") {
@@ -138,26 +154,33 @@ func Sync(root string, cfg config.Config, a Adapter, o Options) ([]Action, Cache
 		body := fmt.Sprintf("Open work left by commit `%s` on %s.\n\nClose it with a commit trailer `Done: %s`, or close this issue if it will not be done.\n\n%s",
 			it.Commit, it.Date, it.Text, marker(id))
 		acts = append(acts, Action{Kind: "create", Title: title})
+		created := Issue{Title: title, Body: body, Open: true}
 		if !o.DryRun {
-			created, err := a.Create(title, body, []string{ic.NextLabel})
+			var err error
+			created, err = a.Create(title, body, []string{ic.NextLabel})
 			if err != nil {
 				return acts, cache, err
 			}
+			created.Open = true
 			acts[len(acts)-1].Number = created.Number
 		}
+		// The same text may be open in several commits: one issue for all.
+		byID[id] = created
 	}
+	closed := map[int]bool{}
 	for _, ci := range b.ClosedItems {
 		id := journal.ItemID(ci.Text)
 		if openIDs[id] {
 			continue // reopened by a later Next with the same text
 		}
 		is, ok := byID[id]
-		if !ok || !is.Open {
+		if !ok || !is.Open || is.Number == 0 || closed[is.Number] {
 			continue
 		}
+		closed[is.Number] = true
 		acts = append(acts, Action{Kind: "close", Number: is.Number, Title: is.Title})
 		if !o.DryRun {
-			if err := a.Close(is.Number, "Done in commit "+ci.Commit+"."); err != nil {
+			if err := a.Close(is.Number, doneComment+ci.Commit+"."); err != nil {
 				return acts, cache, err
 			}
 		}
@@ -169,12 +192,18 @@ func Sync(root string, cfg config.Config, a Adapter, o Options) ([]Action, Cache
 	}
 	for _, d := range decisions {
 		q := Question{Number: d.Number, Title: d.Title, URL: d.URL, Open: d.Open}
-		if n := len(d.Comments); n > 0 {
-			last := d.Comments[n-1]
-			q.Answer, q.AnsBy, q.Answered = strings.TrimSpace(last.Body), last.Author, last.Created
-			if r := []rune(q.Answer); len(r) > 500 {
-				q.Answer = string(r[:499]) + "…"
+		// The answer is the latest comment by someone who can write to the
+		// repository; comments by anyone else are ignored.
+		for k := len(d.Comments) - 1; k >= 0; k-- {
+			c := d.Comments[k]
+			if !c.Maintainer || strings.TrimSpace(c.Body) == "" {
+				continue
 			}
+			q.Answer, q.AnsBy, q.Answered = strings.TrimSpace(c.Body), c.Author, c.Created
+			break
+		}
+		if r := []rune(q.Answer); len(r) > 500 {
+			q.Answer = string(r[:499]) + "…"
 		}
 		switch {
 		case q.Answer != "":

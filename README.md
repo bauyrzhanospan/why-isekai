@@ -126,6 +126,12 @@ With `npm i -D why-isekai`, use `npx isekai` in the husky files.
 ```yaml
 # .github/workflows/journal.yml
 on: [push, pull_request]
+permissions:
+  contents: read
+  issues: write          # only for issue sync ([issues] enabled = true)
+concurrency:             # one sync at a time, so close pushes cannot open duplicate issues
+  group: isekai-${{ github.ref }}
+  cancel-in-progress: false
 jobs:
   journal:
     runs-on: ubuntu-latest
@@ -137,7 +143,7 @@ jobs:
           strict: "false"   # true: hold human commits to the same rules
 ```
 
-The action downloads the release binary (no Go needed), checks the pull request's commits (or the pushed ones), fails when an agent commit breaks the spec in `block` mode, and writes a table of commits without a reason to the job summary. Inputs: `range`, `strict`, `mode`, `version` (`latest`, a version, or `source`), `summary`.
+The action downloads the release binary (no Go needed), checks the pull request's commits (or the pushed ones), fails when an agent commit breaks the spec in `block` mode, and writes a table of commits without a reason to the job summary. Inputs: `range`, `strict`, `mode`, `version` (`latest`, a version, or `source`), `summary`, `sync-issues`. On a shallow clone it fetches the full history first, and it fails rather than pass a range it cannot see.
 
 `isekai check [<range>]` exits non-zero when an agent commit breaks the spec in `block` mode. Add `--strict` to hold human commits to the same rules, and `--format json` for machine-readable output. Without a range it checks `@{upstream}..HEAD`, or `HEAD` if there is no upstream. CI cannot see the agent's environment, so it recognises agent commits by their trailers.
 

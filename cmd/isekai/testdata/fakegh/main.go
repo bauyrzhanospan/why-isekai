@@ -13,8 +13,9 @@ type comment struct {
 	Author struct {
 		Login string `json:"login"`
 	} `json:"author"`
-	Body      string `json:"body"`
-	CreatedAt string `json:"createdAt"`
+	Body              string `json:"body"`
+	CreatedAt         string `json:"createdAt"`
+	AuthorAssociation string `json:"authorAssociation"`
 }
 
 type issue struct {
@@ -89,6 +90,10 @@ func main() {
 				if len(body) > 0 {
 					c := comment{Body: body[0], CreatedAt: "2026-11-03T10:00:00Z"}
 					c.Author.Login = os.Getenv("FAKE_GH_USER")
+					c.AuthorAssociation = os.Getenv("FAKE_GH_ASSOC")
+					if c.AuthorAssociation == "" {
+						c.AuthorAssociation = "OWNER"
+					}
 					is[k].Comments = append(is[k].Comments, c)
 				}
 			}

@@ -67,14 +67,15 @@ type ghIssue struct {
 		Author struct {
 			Login string `json:"login"`
 		} `json:"author"`
-		Body      string `json:"body"`
-		CreatedAt string `json:"createdAt"`
+		Body              string `json:"body"`
+		CreatedAt         string `json:"createdAt"`
+		AuthorAssociation string `json:"authorAssociation"`
 	} `json:"comments"`
 }
 
 // List implements Adapter.
 func (g *GitHub) List(label string) ([]Issue, error) {
-	out, err := g.gh("issue", "list", "--label", label, "--state", "all", "--limit", "500", "--json", "number,title,body,state,url,comments")
+	out, err := g.gh("issue", "list", "--label", label, "--state", "all", "--limit", "10000", "--json", "number,title,body,state,url,comments")
 	if err != nil {
 		return nil, err
 	}
@@ -86,12 +87,15 @@ func (g *GitHub) List(label string) ([]Issue, error) {
 	for _, r := range raw {
 		i := Issue{Number: r.Number, Title: r.Title, Body: r.Body, Open: strings.EqualFold(r.State, "open"), URL: r.URL}
 		for _, c := range r.Comments {
-			i.Comments = append(i.Comments, Comment{Author: c.Author.Login, Body: c.Body, Created: c.CreatedAt})
+			i.Comments = append(i.Comments, Comment{Author: c.Author.Login, Body: c.Body, Created: c.CreatedAt, Maintainer: maintainerRoles[strings.ToUpper(c.AuthorAssociation)]})
 		}
 		is = append(is, i)
 	}
 	return is, nil
 }
+
+// Only people with write access to the repository may answer an agent.
+var maintainerRoles = map[string]bool{"OWNER": true, "MEMBER": true, "COLLABORATOR": true}
 
 var issueNumRe = regexp.MustCompile(`/issues/([0-9]+)\s*$`)
 
