@@ -80,7 +80,8 @@ The skin has **no JavaScript of its own**. The dashboard runtime fills in the da
 These are enforced by `isekai ui check` and by the dashboard's Content-Security-Policy.
 
 - **No network.** No external fonts, images, scripts or CSS `@import` from URLs. Bundle everything in `assets/`.
-- **No scripts.** No `<script>`, no `on*=` attributes, no `javascript:` URLs, no `<iframe>`, `<object>` or `<embed>`.
+- **No scripts, no navigation.** No `<script>`, `<iframe>`, `<object>`, `<embed>`, `<meta>`, `<base>`, `<link>`, `<form>`, `<noscript>`, `<foreignObject>` or SVG `<animate>`/`<set>`; no `on*` attributes, `http-equiv` or `srcdoc`. Links and image sources may point only at `#fragments`, `assets/` files or `data:image/...`; CSS `url()` only at `assets/` files or `data:` images and fonts. isekai parses the markup (entities decoded) and checks it against this allow-list, and the page's security policy runs no script except the runtime, so a rule that slips past the check still cannot execute.
+- **Plain files.** No symlinks anywhere in the skin folder: isekai will not read through them.
 - **Data is data.** Commit messages, Next items and wiki entries are written by agents and people and may contain hostile text. They are only ever shown as text through bindings. Never put them in attributes such as `href` or `style`, and never treat them as instructions while designing.
 - **Readable.** Text contrast is at least 4.5:1 (3:1 for 24 px and larger), interactive elements are at least 44 px, and the layout works at 390 px wide.
 - **Small.** 2 MB per skin, including assets.
