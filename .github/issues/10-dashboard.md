@@ -1,5 +1,6 @@
 ---
 title: "Project dashboard for humans: `isekai stats` and a one-page HTML view"
+status: partial
 labels: [journal, ux, phase-2]
 ---
 A vibe coder should see at a glance what the agents have been doing and what IsekAI gives them, without reading git log.
@@ -24,3 +25,5 @@ A vibe coder should see at a glance what the agents have been doing and what Ise
 - The GitHub Action (task 8) writes the same numbers to the job summary and can publish the page to GitHub Pages.
 
 **Done when** `isekai dashboard` on this repository produces a page a non-programmer understands in 10 seconds, with tests for every metric on a synthetic repo.
+
+**Status (2026-11-03):** Done in 85233f2: `isekai stats`, `isekai dashboard` with Isekai and Corporate looks and the Change look dialog. Left: editing settings from the page (needs a local save path) and the 3D hero.

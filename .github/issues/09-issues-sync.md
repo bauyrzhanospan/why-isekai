@@ -1,5 +1,6 @@
 ---
 title: "Sync the journal with issues: Next opens, Done closes, humans answer in comments"
+status: done
 labels: [journal, integration, phase-2]
 ---
 Issues are the interface a (vibe-)coding human already watches. The journal should show up there, and humans should be able to answer agents there.
@@ -34,3 +35,5 @@ So an agent can ask a question (open issue `decision`), a human answers in a com
 2. A human closing an issue is reflected only in `isekai brief` (read through the cache); no bot commits to git.
 
 **Done when** the Action opens/closes issues for this repository's own Next/Done trailers, `isekai brief --issues` shows "Waiting for humans" with answers, re-runs create no duplicates, and SPEC.md/SPEC.ru.md describe the integration.
+
+**Status (2026-11-03):** Done in f584f99: `isekai issues sync|ask|status`, cache read by brief and stats, GitHub adapter via gh, Action step, spec appendix.

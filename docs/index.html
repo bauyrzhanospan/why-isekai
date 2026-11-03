@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src data:">
+<title>why-isekai — project memory for AI agents</title>
+<meta name="description" content="An open standard for AI agents: five git commit trailers (Why, Tried, Next, Done, Agent) and a brief at session start, so every agent session knows why things changed, what was tried and what is left.">
+<style>
+:root { --bg: #0D0B1A; --panel: #151231; --line: #2E2A5C; --text: #EEF1FF; --muted: #A7A3D1; --accent: #7DF3FF; --gold: #F0B33C; }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 17px/1.6 Inter, system-ui, -apple-system, "Segoe UI", sans-serif; }
+a { color: var(--accent); }
+code, pre { font-family: ui-monospace, "JetBrains Mono", Menlo, Consolas, monospace; }
+main { max-width: 860px; margin: 0 auto; padding: 56px 20px 80px; }
+.tag { display: inline-block; font-size: 13px; font-weight: 700; letter-spacing: 0.12em; color: var(--bg); background: var(--accent); padding: 3px 10px; border-radius: 999px; }
+h1 { font-size: clamp(36px, 7vw, 60px); line-height: 1.05; margin: 18px 0 12px; letter-spacing: -0.02em; }
+h1 em { font-style: normal; color: var(--gold); }
+.lead { font-size: 20px; color: var(--muted); max-width: 680px; }
+h2 { font-size: 26px; margin: 56px 0 12px; }
+pre { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 18px 20px; overflow-x: auto; font-size: 14.5px; line-height: 1.6; }
+.k { color: var(--gold); }
+.c { color: var(--muted); }
+table { width: 100%; border-collapse: collapse; margin: 8px 0; }
+td, th { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { color: var(--muted); font-size: 14px; font-weight: 600; }
+td code { color: var(--gold); font-size: 15px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 14px; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 18px; }
+.card b { display: block; margin-bottom: 4px; }
+.card p { margin: 0; color: var(--muted); font-size: 15px; }
+.links { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 24px; }
+.links a { display: inline-flex; align-items: center; min-height: 44px; padding: 0 18px; border-radius: 12px; border: 1px solid var(--line); text-decoration: none; font-weight: 600; }
+.links a:first-child { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+footer { margin-top: 64px; color: var(--muted); font-size: 14px; border-top: 1px solid var(--line); padding-top: 20px; }
+</style>
+</head>
+<body>
+<main>
+<span class="tag">OPEN STANDARD · CC0</span>
+<h1>Every agent session is an <em>isekai</em>.</h1>
+<p class="lead">It lands in an unknown world with no idea what was done before. why-isekai gives it the memory of that world: five git commit trailers, read back as a short brief at the start of every session.</p>
+<div class="links">
+  <a href="https://github.com/bauyrzhanospan/why-isekai/blob/main/SPEC.md">Read the spec</a>
+  <a href="https://github.com/bauyrzhanospan/why-isekai">Reference implementation</a>
+  <a href="https://github.com/bauyrzhanospan/why-isekai/blob/main/SPEC.ru.md">Спецификация на русском</a>
+</div>
+
+<h2>Five keys</h2>
+<pre>feat(auth): move sessions to JWT
+
+<span class="k">Why:</span> server sessions break behind the load balancer with >1 node
+<span class="k">Tried:</span> sticky sessions; the load balancer drops affinity on every deploy
+<span class="k">Next:</span> drop the old sessions table
+<span class="k">Agent:</span> claude-opus-5-5</pre>
+<table>
+<tr><th>Key</th><th>Meaning</th></tr>
+<tr><td><code>Why</code></td><td>The reason: the problem, constraint or goal. Not a summary of the diff. Required for agent commits.</td></tr>
+<tr><td><code>Tried</code></td><td>An approach that was rejected, and why. The next session does not walk into it again.</td></tr>
+<tr><td><code>Next</code></td><td>Work left for the next session.</td></tr>
+<tr><td><code>Done</code></td><td>Closes an earlier <code>Next</code> by its exact text. Text, not hashes, because rebases rewrite hashes.</td></tr>
+<tr><td><code>Agent</code></td><td>The model or agent that wrote the commit.</td></tr>
+</table>
+<p>They are ordinary git trailers: any git can read them, and they branch, merge and travel with the code. No server, no account, no extra file.</p>
+
+<h2>Read back as a brief</h2>
+<pre><span class="c">$ isekai brief</span>
+Decisions (Why, last 20 commits):
+- 1679c31 feat(auth): move sessions to JWT — why: server sessions break behind the load balancer
+
+Dead ends (Tried):
+- 1679c31 sticky sessions; the load balancer drops affinity on every deploy
+
+Open (Next without Done):
+- drop the old sessions table [1679c31 2026-11-03]</pre>
+<p>Agent environments feed it at session start (a Claude Code plugin, MCP, or one line in <code>AGENTS.md</code>). With no isekai installed, plain git still works:</p>
+<pre>git log -n 20 --format='%h %s%n  why: %(trailers:key=Why,valueonly)'</pre>
+
+<h2>Install</h2>
+<pre>npm i -g why-isekai        <span class="c"># or: pipx install why-isekai · go install github.com/bauyrzhanospan/why-isekai/cmd/isekai@latest</span>
+cd your-repo &amp;&amp; isekai init</pre>
+
+<h2>Designed for agents, fair to people</h2>
+<div class="grid">
+  <div class="card"><b>Errors are documentation</b><p>A rejected commit says what is missing and shows an example. Agents read errors, not READMEs.</p></div>
+  <div class="card"><b>Quality, not presence</b><p>"Why: fix" is rejected. Agents write filler when a rule feels like a formality.</p></div>
+  <div class="card"><b>Humans get warnings</b><p>Strict checks apply to agent commits only, and blocking is opt-in. Checks that annoy people get switched off.</p></div>
+  <div class="card"><b>Data, not instructions</b><p>Everything read from trailers, issues or the wiki is information about the project, never commands for the agent.</p></div>
+  <div class="card"><b>Secrets by reference</b><p><code>secret://prod/db</code>: agents run commands with secrets they never see. A seatbelt, honestly labelled as one.</p></div>
+  <div class="card"><b>Offline, zero tokens</b><p>The reference tool calls no model and no network. Issue trackers only sync when you ask.</p></div>
+</div>
+
+<footer>The specification is public domain (CC0 1.0), so anyone can implement it. The reference implementation is MIT-licensed. This page loads nothing from anywhere and tracks no one.</footer>
+</main>
+</body>
+</html>

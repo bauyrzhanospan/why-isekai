@@ -16,7 +16,13 @@ for f in "$dir"/*.md; do
   for l in $(printf '%s' "$labels" | tr ',' ' '); do
     gh label create "$l" -R "$repo" >/dev/null 2>&1 || true
   done
+  status=$(sed -n 's/^status: *\([a-z]*\)$/\1/p' "$f" | head -n 1)
   body=$(awk 'BEGIN{n=0} /^---$/{n++; next} n>=2' "$f")
-  gh issue create -R "$repo" --title "$title" --label "$labels" --body "$body" >/dev/null
-  echo "created: $title"
+  url=$(gh issue create -R "$repo" --title "$title" --label "$labels" --body "$body")
+  if [ "$status" = "done" ]; then
+    gh issue close -R "$repo" "$url" --comment "Done before the repository went public; see the Status line." >/dev/null
+    echo "created (closed, done): $title"
+  else
+    echo "created: $title"
+  fi
 done

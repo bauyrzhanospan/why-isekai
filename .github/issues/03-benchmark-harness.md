@@ -1,5 +1,6 @@
 ---
 title: "Benchmark harness: agent sessions with vs without the journal"
+status: done
 labels: [benchmark, phase-1]
 ---
 Without numbers this is "yet another commit convention". We need a reproducible measurement.
@@ -12,3 +13,5 @@ Without numbers this is "yet another commit convention". We need a reproducible 
 - Everything scripted and published: tasks, prompts, seeds, raw logs, analysis notebook.
 
 **Done when** `bench/` runs end to end with one command and produces a results table.
+
+**Status (2026-11-03):** Done in 2857084: bench/run.py with two arms, three tasks with reference solutions, --self-test in CI, bench/analyze.py. Growing to 10–20 tasks is tracked in task 4.

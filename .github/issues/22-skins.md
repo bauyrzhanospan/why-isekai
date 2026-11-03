@@ -1,5 +1,6 @@
 ---
 title: "Skins: any developer tells their agent how the dashboard should look"
+status: done
 labels: [ux, dashboard, phase-2]
 ---
 Builds on task 10. Design and agent instructions: [docs/skins.md](../../docs/skins.md).
@@ -18,3 +19,5 @@ Builds on task 10. Design and agent instructions: [docs/skins.md](../../docs/ski
 **Rule.** Original work only: genre conventions are fine, but no copied game or brand assets (see docs/skins.md).
 
 **Done when** a developer types "make it look like a dark MOBA HUD" into Change look, pastes the prompt into Claude Code, and gets a working, validated skin applied to the dashboard, with no change to the isekai binary.
+
+**Status (2026-11-03):** Done in 83804a5: `isekai ui list|new|check|use`, asset inlining, required slots, binding checks, and the moba-hud example built by following docs/skins.md. Left for later: `isekai ui add <git-url>`.
