@@ -671,3 +671,58 @@ func TestWarmBriefWithoutTrailers(t *testing.T) {
 		t.Errorf("a removed FIXME is still listed:\n%s", out)
 	}
 }
+
+func TestMCPServer(t *testing.T) {
+	r := newRepo(t, true)
+	r.mustInit("--mcp")
+	if !strings.Contains(string(mustRead(t, filepath.Join(r.dir, ".mcp.json"))), `"isekai"`) {
+		t.Fatal(".mcp.json not written")
+	}
+	r.commit("feat: a\n\nWhy: seed history for the MCP brief\nNext: wire the MCP server into the docs")
+	in := strings.Join([]string{
+		`{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"t","version":"0"}}}`,
+		`{"jsonrpc":"2.0","method":"notifications/initialized"}`,
+		`{"jsonrpc":"2.0","id":2,"method":"tools/list"}`,
+		`{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"isekai_brief","arguments":{"n":5}}}`,
+		`{"jsonrpc":"2.0","id":4,"method":"tools/call","params":{"name":"isekai_wiki_add","arguments":{"page":"gotchas","text":"tests need git 2.30+"}}}`,
+		`{"jsonrpc":"2.0","id":5,"method":"tools/call","params":{"name":"isekai_check","arguments":{"range":"--output=/tmp/x"}}}`,
+		`{"jsonrpc":"2.0","id":6,"method":"nope"}`,
+	}, "\n") + "\n"
+	cmd := exec.Command(filepath.Join(binDir, "isekai"), "mcp")
+	cmd.Dir, cmd.Env, cmd.Stdin = r.dir, r.env, strings.NewReader(in)
+	out, err := cmd.Output()
+	if err != nil {
+		t.Fatal(err)
+	}
+	lines := strings.Split(strings.TrimSpace(string(out)), "\n")
+	if len(lines) != 6 {
+		t.Fatalf("want 6 responses (notification gets none), got %d:\n%s", len(lines), out)
+	}
+	var resp []map[string]any
+	for _, l := range lines {
+		var m map[string]any
+		if err := json.Unmarshal([]byte(l), &m); err != nil {
+			t.Fatalf("bad json %q", l)
+		}
+		resp = append(resp, m)
+	}
+	text := func(i int) string {
+		c := resp[i]["result"].(map[string]any)["content"].([]any)[0].(map[string]any)
+		return c["text"].(string)
+	}
+	if !strings.Contains(lines[0], `"name":"isekai"`) || !strings.Contains(lines[1], "isekai_brief") {
+		t.Fatalf("init/list:\n%s\n%s", lines[0], lines[1])
+	}
+	if !strings.Contains(text(2), "wire the MCP server into the docs") {
+		t.Fatalf("brief:\n%s", text(2))
+	}
+	if !strings.Contains(text(3), "added gotchas #1") {
+		t.Fatalf("wiki add:\n%s", text(3))
+	}
+	if resp[4]["result"].(map[string]any)["isError"] != true {
+		t.Fatal("flag injection in range was not refused")
+	}
+	if resp[5]["error"] == nil {
+		t.Fatal("unknown method must be an error")
+	}
+}

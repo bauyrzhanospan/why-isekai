@@ -18,7 +18,8 @@ what was done before. isekai records why things changed, what was tried and
 what is left, in plain git commit trailers.
 
 Usage:
-  isekai init [--mode warn|block] [--claude]   install git hooks, config, AGENTS.md line
+  isekai init [--mode warn|block] [--claude] [--mcp]
+                                               install git hooks, config, AGENTS.md line
   isekai brief [-n N] [--format text|md|json]  summary for the start of a session
   isekai check [<range>] [--strict] [--format text|json]
                                                validate commits (for CI)
@@ -26,6 +27,7 @@ Usage:
                                                values masked in its output
   isekai secrets list|set|init                 manage secret references (values never shown to agents)
   isekai wiki add|confirm|stale|list           project wiki in .isekai/wiki
+  isekai mcp [--repo DIR]                      MCP server over stdio (brief, check, wiki, secrets)
   isekai hook <name> ...                       entry points called by git / agent hooks
   isekai version
 
@@ -66,6 +68,8 @@ func run(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 		err = cmdSecrets(rest, stdin, stdout)
 	case "wiki":
 		code, err = cmdWiki(rest, stdout, stderr)
+	case "mcp":
+		code, err = cmdMCP(rest, stdin, stdout, stderr)
 	case "version", "--version", "-v":
 		fmt.Fprintln(stdout, "isekai", version)
 	case "help", "--help", "-h":

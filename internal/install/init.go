@@ -18,6 +18,7 @@ import (
 type Options struct {
 	Mode   config.Mode // used only when the config file is created
 	Claude bool        // also wire up Claude Code hooks
+	MCP    bool        // also register the MCP server in .mcp.json
 }
 
 // Step is one line of the init report.
@@ -81,7 +82,50 @@ func Init(dir string, o Options) ([]Step, error) {
 		}
 		steps = append(steps, Step{filepath.ToSlash(filepath.Join(".claude", "settings.json")), a})
 	}
+	if o.MCP {
+		a, err = ensureMCPConfig(filepath.Join(root, ".mcp.json"))
+		if err != nil {
+			return steps, err
+		}
+		steps = append(steps, Step{".mcp.json", a})
+	}
 	return steps, nil
+}
+
+// ensureMCPConfig registers `isekai mcp` in a project .mcp.json (read by
+// Claude Code and other MCP clients), keeping other servers.
+func ensureMCPConfig(path string) (Action, error) {
+	cfg := map[string]any{}
+	data, err := os.ReadFile(path)
+	exists := err == nil
+	if err != nil && !errors.Is(err, fs.ErrNotExist) {
+		return "", err
+	}
+	if exists && len(strings.TrimSpace(string(data))) > 0 {
+		if err := json.Unmarshal(data, &cfg); err != nil {
+			return "", fmt.Errorf("%s is not valid JSON: %w", path, err)
+		}
+	}
+	servers, _ := cfg["mcpServers"].(map[string]any)
+	if servers == nil {
+		servers = map[string]any{}
+	}
+	if _, ok := servers["isekai"]; ok {
+		return Unchanged, nil
+	}
+	servers["isekai"] = map[string]any{"command": "isekai", "args": []any{"mcp"}}
+	cfg["mcpServers"] = servers
+	out, err := json.MarshalIndent(cfg, "", "  ")
+	if err != nil {
+		return "", err
+	}
+	if err := os.WriteFile(path, append(out, '\n'), 0o644); err != nil {
+		return "", err
+	}
+	if exists {
+		return Updated, nil
+	}
+	return Created, nil
 }
 
 func rel(root, p string) string {

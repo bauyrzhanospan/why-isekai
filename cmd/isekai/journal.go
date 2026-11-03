@@ -59,15 +59,16 @@ func cmdInit(args []string, out io.Writer) error {
 	fs := newFlags("init")
 	mode := fs.String("mode", "warn", "warn or block")
 	claude := fs.Bool("claude", false, "also install Claude Code hooks")
+	mcp := fs.Bool("mcp", false, "also register the isekai MCP server in .mcp.json")
 	if err := fs.Parse(args); err != nil {
-		return fmt.Errorf("init: %v (usage: isekai init [--mode warn|block] [--claude])", err)
+		return fmt.Errorf("init: %v (usage: isekai init [--mode warn|block] [--claude] [--mcp])", err)
 	}
 	m := config.Mode(*mode)
 	if m != config.ModeWarn && m != config.ModeBlock {
 		return fmt.Errorf("init: --mode must be warn or block")
 	}
 	wd, _ := os.Getwd()
-	steps, err := install.Init(wd, install.Options{Mode: m, Claude: *claude})
+	steps, err := install.Init(wd, install.Options{Mode: m, Claude: *claude, MCP: *mcp})
 	for _, s := range steps {
 		fmt.Fprintf(out, "%-10s %s\n", s.Action, s.Path)
 	}

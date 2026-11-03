@@ -98,6 +98,7 @@ jobs:
 ## Agent environments
 
 - **Claude Code.** `isekai init --claude` adds two hooks to `.claude/settings.json` and keeps the rest of the file as it was. A `SessionStart` hook runs `isekai brief`, so the brief lands in the agent's context. A `PreToolUse` guard stops `git commit --no-verify`, `git -c core.hooksPath=…` and `ISEKAI_MODE=…` overrides, and tells the agent how to commit properly.
+- **Any MCP client.** `isekai init --mcp` registers `isekai mcp` in `.mcp.json` (Claude Code reads it; for Cursor, OpenCode and others add `{"command": "isekai", "args": ["mcp"]}` to their MCP config). Tools: `isekai_brief`, `isekai_check`, `isekai_wiki_list`, `isekai_wiki_add`, `isekai_secrets_list`. Stdio only, no network; secret values are never exposed.
 - **Everything else** (Codex, Cursor, Cline, Aider, OpenCode, Goose, …) reads `AGENTS.md`. `isekai init` adds one line there telling the agent to run `isekai brief` and how to write trailers.
 
 These guards are seatbelts, not walls: a determined agent can still bypass git hooks. What makes the journal work is that the right path is the easy one: the template, the error that teaches the format, and the brief arriving without being asked for.
