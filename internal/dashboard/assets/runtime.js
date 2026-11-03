@@ -181,7 +181,10 @@
       b.setAttribute('aria-pressed', String(l.id === current));
       var n = document.createElement('strong'); n.textContent = l.name; b.appendChild(n);
       var s = document.createElement('span'); s.textContent = l.desc || ''; b.appendChild(s);
-      b.addEventListener('click', function () { d.close(); d.remove(); render(l.id); });
+      b.addEventListener('click', function () {
+        d.close(); d.remove(); render(l.id);
+        try { localStorage.setItem(LOOK_KEY, l.id); } catch (e) {}
+      });
       list.appendChild(b);
     });
     d.appendChild(list);
@@ -216,11 +219,13 @@
     each(app.querySelectorAll('isekai-icon'), icon);
     each(app.querySelectorAll('isekai-hero'), hero);
     each(app.querySelectorAll('isekai-look-button'), lookButton);
-    try { localStorage.setItem('isekai-look', look.id); } catch (e) {}
   }
-  var saved = null;
-  try { saved = localStorage.getItem('isekai-look'); } catch (e) {}
+  // A look is remembered only when the viewer picks one, and only while the
+  // project's default stays the same, so that `isekai ui use` takes effect.
   var forced = document.documentElement.getAttribute('data-default-look');
+  var LOOK_KEY = 'isekai-look:' + forced;
+  var saved = null;
+  try { saved = localStorage.getItem(LOOK_KEY); } catch (e) {}
   var hasSaved = looks.some(function (l) { return l.id === saved; });
   render(document.documentElement.hasAttribute('data-force-look') || !hasSaved ? forced : saved);
 })();

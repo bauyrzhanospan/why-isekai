@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Dashboard: `isekai ui use` now reaches browsers that opened the dashboard before. The page used to store whatever look it rendered and prefer it over the config; it now stores only a look the viewer picks, and only until the default changes.
+
 ## 0.1.0 (2026-11-03)
 
 First version of the reference implementation of the why-isekai spec 0.1.0-draft.
