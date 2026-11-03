@@ -77,9 +77,10 @@ jobs:
       contents: read
       id-token: write
     steps:
+      # Packaging scripts come from the commit this run started from (the tag
+      # on a tag push, the chosen branch on a manual run); the binaries come
+      # from the release archives.
       - uses: actions/checkout@v4
-        with:
-          ref: ${{ env.TAG }}
       - uses: actions/download-artifact@v4
         with:
           name: dist
@@ -102,9 +103,10 @@ jobs:
       contents: read
       id-token: write # PyPI trusted publishing, no token needed
     steps:
+      # Packaging scripts come from the commit this run started from (the tag
+      # on a tag push, the chosen branch on a manual run); the binaries come
+      # from the release archives.
       - uses: actions/checkout@v4
-        with:
-          ref: ${{ env.TAG }}
       - uses: actions/download-artifact@v4
         with:
           name: dist
