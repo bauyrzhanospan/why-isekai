@@ -1,6 +1,6 @@
 ---
 title: "Sync the journal with issues: Next opens, Done closes, humans answer in comments"
-labels: [journal, integration, phase-2, decision]
+labels: [journal, integration, phase-2]
 ---
 Issues are the interface a (vibe-)coding human already watches. The journal should show up there, and humans should be able to answer agents there.
 
@@ -29,6 +29,8 @@ So an agent can ask a question (open issue `decision`), a human answers in a com
 
 **Spec changes** (needs maintainer OK): `#<n>` as a value of `Next`/`Done`; §B.3 exception for explicitly enabled forge integrations; a short "Issue trackers" section stating trailers are canonical.
 
-**Open questions for the maintainer**
-1. Every `Next` becomes an issue, or only ones marked (e.g. `Next: [issue] …`)? Proposal: every one, configurable — a vibe coder wants to see all open work.
-2. Should a human closing an issue also be recorded in git (a bot commit with `Done:`), or only reflected in the brief? Proposal: brief only; no bot commits.
+**Decided by the maintainer (2026-11-03)**
+1. Every `Next` becomes an issue by default; configurable (`[issues] open_for = "all" | "marked"`, or `enabled = false`).
+2. A human closing an issue is reflected only in `isekai brief` (read through the cache); no bot commits to git.
+
+**Done when** the Action opens/closes issues for this repository's own Next/Done trailers, `isekai brief --issues` shows "Waiting for humans" with answers, re-runs create no duplicates, and SPEC.md/SPEC.ru.md describe the integration.
