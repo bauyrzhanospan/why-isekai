@@ -36,6 +36,7 @@ jobs:
         run: |
           node packaging/npm/build.mjs --self-test
           python3 packaging/pypi/build_wheels.py --self-test
+          python3 bench/run.py --self-test
 
   # Eat our own dog food: every commit in a PR must follow the spec,
   # checked by this repository's own GitHub Action built from source.

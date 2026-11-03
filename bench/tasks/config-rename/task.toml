@@ -1,0 +1,6 @@
+id = "config-rename"
+summary = "Rename timeout to timeout_s, keep old configs working"
+prompt = "Finish this task in the repository: the config key timeout must be renamed to timeout_s in config.py, and existing configs that still use timeout must keep working. Run the tests (python3 -m unittest -q) before you stop and commit your change."
+check = "python3 -m unittest -q && git diff --quiet \"$(cat .git/bench-base)\" -- fixtures/"
+dead_end = "renaming the key in the fixtures"
+dead_end_patterns = ["fixtures/"]

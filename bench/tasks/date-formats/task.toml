@@ -1,0 +1,7 @@
+id = "date-formats"
+summary = "Support DD.MM.YYYY in parse_date"
+prompt = "Finish this task in the repository: parse_date in dates.py must also accept DD.MM.YYYY (for example 03.11.2026). Run the tests (python3 -m unittest -q) before you stop and commit your change."
+check = "python3 -m unittest -q"
+# The approach session 1 already tried and rejected.
+dead_end = "python-dateutil"
+dead_end_patterns = ["dateutil", "pip install"]

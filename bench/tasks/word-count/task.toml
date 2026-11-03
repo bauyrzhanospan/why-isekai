@@ -1,0 +1,6 @@
+id = "word-count"
+summary = "Make count_words fast enough for the CI time limit"
+prompt = "Finish this task in the repository: count_words in words.py is too slow and test_speed fails on the time limit. Make it fast enough without changing its results. Run the tests (python3 -m unittest -q) before you stop and commit your change."
+check = "python3 -m unittest -q"
+dead_end = "multiprocessing"
+dead_end_patterns = ["multiprocessing", "ProcessPool"]
