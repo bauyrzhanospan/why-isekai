@@ -79,6 +79,46 @@ These are ordinary git trailers, so `git log --format='%(trailers:key=Why,valueo
 
 **Existing hooks are kept.** `isekai init` adds its block to shell hooks instead of replacing them. A hook written in another language (Python, Node) is moved to `<hook>.isekai-chained` and called after the check. Running `init` again changes nothing. If you use `core.hooksPath` (husky and similar), `init` installs into that directory.
 
+### Hook managers
+
+If your team installs hooks through a manager, use it instead of `isekai init`'s hooks (you can still run `isekai init` for the config and the AGENTS.md line).
+
+**pre-commit** (`.pre-commit-config.yaml`; builds isekai with Go, nothing else to install):
+
+```yaml
+default_install_hook_types: [pre-commit, commit-msg, prepare-commit-msg]
+repos:
+  - repo: https://github.com/bauyrzhanospan/why-isekai
+    rev: v0.1.0
+    hooks:
+      - id: isekai-commit-msg
+      - id: isekai-prepare-commit-msg
+```
+
+**lefthook** (`lefthook.yml`; needs `isekai` on PATH):
+
+```yaml
+commit-msg:
+  commands:
+    isekai:
+      run: isekai hook commit-msg {1}
+prepare-commit-msg:
+  commands:
+    isekai:
+      run: isekai hook prepare-commit-msg {1} {2} {3}
+```
+
+**husky** (`.husky/commit-msg` and `.husky/prepare-commit-msg`):
+
+```sh
+# .husky/commit-msg
+isekai hook commit-msg "$1"
+# .husky/prepare-commit-msg
+isekai hook prepare-commit-msg "$1" "$2" "$3"
+```
+
+With `npm i -D why-isekai`, use `npx isekai` in the husky files.
+
 ### CI
 
 ```yaml

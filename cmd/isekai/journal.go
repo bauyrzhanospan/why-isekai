@@ -228,6 +228,9 @@ func cmdHook(args []string, stdin io.Reader, stdout, stderr io.Writer) (int, err
 		src := ""
 		if len(args) > 2 {
 			src = args[2]
+		} else {
+			// pre-commit passes only the file; the source comes in its environment.
+			src = os.Getenv("PRE_COMMIT_COMMIT_MSG_SOURCE")
 		}
 		if err := hookPrepare(args[1], src); err != nil {
 			// Never block a commit because the template could not be written.

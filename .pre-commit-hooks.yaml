@@ -1,0 +1,23 @@
+# why-isekai hooks for https://pre-commit.com
+# In your .pre-commit-config.yaml:
+#   default_install_hook_types: [pre-commit, commit-msg, prepare-commit-msg]
+#   repos:
+#     - repo: https://github.com/bauyrzhanospan/why-isekai
+#       rev: v0.1.0
+#       hooks:
+#         - id: isekai-commit-msg
+#         - id: isekai-prepare-commit-msg
+- id: isekai-commit-msg
+  name: isekai — commit explains why
+  description: Checks the Why/Tried/Next/Done/Agent trailers (block mode is opt-in via .isekai/config.toml).
+  entry: isekai hook commit-msg
+  language: golang
+  stages: [commit-msg]
+  always_run: true
+- id: isekai-prepare-commit-msg
+  name: isekai — commit message template
+  description: Pre-fills the editor with the trailer keys, staged files and open Next items.
+  entry: isekai hook prepare-commit-msg
+  language: golang
+  stages: [prepare-commit-msg]
+  always_run: true
