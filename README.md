@@ -196,7 +196,9 @@ isekai secrets list                                     # references only, never
 
 > **Be honest about the boundary.** Access rules and masking are a seatbelt against mistakes and prompt-injected curiosity, **not a security boundary.** An agent says who it is and can lie, and a process that receives a secret can leak it in ways a mask cannot catch (by reversing it, or printing it byte by byte). The real boundary is which decryption keys exist in the environment the agent runs in. If an agent must never touch prod, do not put a key that decrypts prod where the agent runs.
 
-IsekAI has no cryptography of its own. It uses age through the reference Go implementation, or calls `sops`. Adapters for dotenvx, 1Password, Vault and Infisical are planned.
+- **Other managers.** `type = "dotenvx" | "1password" | "vault" | "infisical"` reads through that tool's own CLI (it must be installed and logged in), with `scopes = ["dev", "prod"]` so names can be listed. The presets follow each CLI's documentation; if your layout differs, set `get = ["tool", "arg", "{scope}", "{name}"]` and `list = [...]`, or use `type = "command"` for any other manager. Commands run without a shell, and references are limited to letters, digits, `_` and `-`, so a reference cannot inject arguments.
+
+IsekAI has no cryptography of its own: it uses age through the reference Go implementation, or calls `sops` and the other managers' CLIs.
 
 ## Wiki (spec Module 3, experimental)
 

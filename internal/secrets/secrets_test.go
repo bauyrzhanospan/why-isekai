@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 	"testing"
@@ -153,5 +154,44 @@ func TestNamedAgentExclusion(t *testing.T) {
 	c := Config{Access: map[string][]string{"agent": {"*/*"}, "agent:bot": {"!dev/x"}}}
 	if c.Allowed(Ref{"dev", "x"}, "bot") || !c.Allowed(Ref{"dev", "y"}, "bot") || !c.Allowed(Ref{"dev", "x"}, "other") {
 		t.Fatal("named exclusion")
+	}
+}
+
+func TestCommandStorePresetWithFakeCLI(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("fake CLI is a shell script")
+	}
+	bin := t.TempDir()
+	// A fake `op`: read prints a value; item list prints JSON titles; unknown items fail.
+	script := "#!/bin/sh\n" +
+		"if [ \"$1\" = read ]; then case \"$2\" in op://dev/db_password/password) printf 'pa55-op-value\\n';; *) echo \"[ERROR] \\\"$2\\\" isn't an item\" >&2; exit 1;; esac; fi\n" +
+		"if [ \"$1\" = item ]; then echo '[{\"title\":\"db_password\"},{\"title\":\"api key\"}]'; fi\n"
+	os.WriteFile(filepath.Join(bin, "op"), []byte(script), 0o755)
+	t.Setenv("PATH", bin+string(os.PathListSeparator)+os.Getenv("PATH"))
+	var c Config
+	c.Store.Type = "1password"
+	c.Store.Scopes = []string{"dev"}
+	st, err := NewCommandStore(t.TempDir(), c)
+	if err != nil {
+		t.Fatal(err)
+	}
+	v, err := st.Get("dev/db_password")
+	if err != nil || v != "pa55-op-value" {
+		t.Fatalf("get: %q %v", v, err)
+	}
+	if _, err := st.Get("dev/nope"); err == nil || !strings.Contains(err.Error(), "not found") || strings.Contains(err.Error(), "pa55") {
+		t.Fatalf("missing: %v", err)
+	}
+	names, err := st.Names()
+	if err != nil || strings.Join(names, ",") != "dev/api_key,dev/db_password" {
+		t.Fatalf("names: %v %v", names, err)
+	}
+	if _, err := st.Get("dev/x; rm -rf /"); err == nil {
+		t.Fatal("bad reference accepted")
+	}
+	c.Store.Type = "vault"
+	st, _ = NewCommandStore(t.TempDir(), c)
+	if _, err := st.Get("dev/db"); err == nil || !strings.Contains(err.Error(), "not installed") {
+		t.Fatalf("missing tool: %v", err)
 	}
 }

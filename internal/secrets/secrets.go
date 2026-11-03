@@ -49,9 +49,14 @@ func ParseRef(s string) (Ref, error) {
 // Config is .isekai/secrets.toml.
 type Config struct {
 	Store struct {
-		Type       string `toml:"type"` // age | sops
+		Type       string `toml:"type"` // age | sops | dotenvx | 1password | vault | infisical | command
 		File       string `toml:"file"`
 		Recipients string `toml:"recipients"` // age only
+		// For command-based stores: the scopes that exist, and optional
+		// overrides of the preset command templates ({scope}, {name}, {NAME}).
+		Scopes []string `toml:"scopes"`
+		Get    []string `toml:"get"`
+		List   []string `toml:"list"`
 	} `toml:"store"`
 	// Access maps "human", "agent" or "agent:<name>" to glob patterns over
 	// scope/name. A pattern starting with "!" excludes.
@@ -89,7 +94,7 @@ func LoadConfig(root string) (Config, bool, error) {
 			c.Store.Recipients = DefaultRecipientsFile
 		}
 	}
-	if c.Store.File == "" {
+	if c.Store.File == "" && (c.Store.Type == "age" || c.Store.Type == "sops") {
 		return c, true, fmt.Errorf("%s: [store] file is required for type %q", ConfigFile, c.Store.Type)
 	}
 	if c.Access == nil {
@@ -113,7 +118,7 @@ const ConfigTemplate = `# why-isekai secrets: where secrets live and who may use
 # decryption keys exist in the environment the agent runs in.
 
 [store]
-type = "age"                                # age (built in) | sops
+type = "age"                                # age (built in) | sops | dotenvx | 1password | vault | infisical | command
 file = ".isekai/secrets.age.json"           # names in clear text, each value age-encrypted
 recipients = ".isekai/age-recipients.txt"   # public keys that can decrypt (one per line)
 
@@ -194,7 +199,7 @@ func Open(root string, c Config) (Store, error) {
 	case "sops":
 		return &SopsStore{Root: root, File: c.Store.File}, nil
 	default:
-		return nil, fmt.Errorf("%s: store type %q is not supported yet (supported: age, sops)", ConfigFile, c.Store.Type)
+		return NewCommandStore(root, c)
 	}
 }
 
