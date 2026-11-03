@@ -4,14 +4,17 @@
 package dashboard
 
 import (
+	"crypto/sha256"
 	"embed"
+	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"html"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
-	"regexp"
 	"sort"
 	"strings"
 
@@ -76,17 +79,28 @@ func LoadSkin(dir string) (Look, error) {
 		Name        string `toml:"name"`
 		Description string `toml:"description"`
 	}
-	if data, err := os.ReadFile(filepath.Join(dir, "skin.toml")); err == nil {
+	if data, err := readRegular(filepath.Join(dir, "skin.toml")); err == nil {
 		if _, err := toml.Decode(string(data), &meta); err != nil {
 			return Look{}, fmt.Errorf("skin %s: skin.toml: %w", id, err)
 		}
 	}
-	h, err := os.ReadFile(filepath.Join(dir, "index.html"))
+	h, err := readRegular(filepath.Join(dir, "index.html"))
 	if err != nil {
 		return Look{}, fmt.Errorf("skin %s: %w", id, err)
 	}
-	c, _ := os.ReadFile(filepath.Join(dir, "skin.css"))
-	if bad := unsafeMarkup(string(h) + string(c)); bad != "" {
+	c, err := readRegular(filepath.Join(dir, "skin.css"))
+	if err != nil && !errors.Is(err, fs.ErrNotExist) {
+		return Look{}, fmt.Errorf("skin %s: %w", id, err)
+	}
+	var svgs []string
+	for _, p := range listAssets(dir, ".svg") {
+		b, err := readRegular(p)
+		if err != nil {
+			return Look{}, fmt.Errorf("skin %s: %w", id, err)
+		}
+		svgs = append(svgs, string(b))
+	}
+	if bad := unsafeSkin(string(h), string(c), svgs); bad != "" {
 		return Look{}, fmt.Errorf("skin %s: %s is not allowed in skins (see docs/skins.md); run isekai ui check %s", id, bad, id)
 	}
 	name := meta.Name
@@ -96,25 +110,17 @@ func LoadSkin(dir string) (Look, error) {
 	return Look{ID: id, Name: name, Description: meta.Description, HTML: inlineAssets(dir, string(h)), CSS: inlineAssets(dir, string(c))}, nil
 }
 
-var unsafeRes = []struct{ what, re string }{
-	{"<script>", `(?i)<\s*script`},
-	{"an on* event attribute", `(?i)\son[a-z]+\s*=`},
-	{"a javascript: URL", `(?i)javascript:`},
-	{"<iframe>, <object> or <embed>", `(?i)<\s*(iframe|object|embed)`},
-	{"a network URL", `(?i)(https?:)?//[a-z0-9.-]+\.[a-z]{2,}`},
-	{"@import", `(?i)@import`},
-}
-
-// unsafeMarkup returns what makes a skin unsafe, or "".
-func unsafeMarkup(s string) string {
-	// XML namespace identifiers look like URLs but are never fetched.
-	s = regexp.MustCompile(`(?i)https?://www\.w3\.org/[0-9a-z/]*`).ReplaceAllString(s, "")
-	for _, u := range unsafeRes {
-		if regexp.MustCompile(u.re).MatchString(s) {
-			return u.what
-		}
+// readRegular reads a file only if it is a regular file: a skin must not
+// pull in what a symlink points at (for example a private key).
+func readRegular(p string) ([]byte, error) {
+	fi, err := os.Lstat(p)
+	if err != nil {
+		return nil, err
 	}
-	return ""
+	if !fi.Mode().IsRegular() {
+		return nil, fmt.Errorf("%s is not a regular file; skins hold plain files only", filepath.Base(p))
+	}
+	return os.ReadFile(p)
 }
 
 // chrome styles the runtime's own UI (the Change look dialog) in any look.
@@ -153,15 +159,28 @@ func Render(w io.Writer, s stats.Stats, looks []Look, defaultLook string, force 
 	}
 	p("<!doctype html>\n<html lang=\"en\" data-default-look=\"%s\"%s>\n<head>\n<meta charset=\"utf-8\">\n", html.EscapeString(defaultLook), forceAttr)
 	p("<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n")
-	p("<meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src data:; font-src data:\">\n")
+	type lookJSON struct {
+		ID   string `json:"id"`
+		Name string `json:"name"`
+		Desc string `json:"desc"`
+		HTML string `json:"html"`
+	}
+	var lj []lookJSON
+	for _, l := range looks {
+		lj = append(lj, lookJSON{l.ID, l.Name, l.Description, "<style>" + l.CSS + "</style>\n" + l.HTML})
+	}
+	// Skin markup travels as JSON, which escapes <, so no skin text can end
+	// an element of this page early (for example with </template>).
+	looksData, err := json.Marshal(lj)
+	if err != nil {
+		return err
+	}
+	sum := sha256.Sum256(runtime)
+	p("<meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'none'; style-src 'unsafe-inline'; script-src 'sha256-%s'; img-src data:; font-src data:; form-action 'none'; base-uri 'none'\">\n", base64.StdEncoding.EncodeToString(sum[:]))
 	p("<title>isekai · %s</title>\n<style>%s</style>\n</head>\n<body>\n<div id=\"app\"></div>\n", html.EscapeString(s.Repo.Name), chrome)
 	p("<script type=\"application/json\" id=\"isekai-data\">%s</script>\n", data)
+	p("<script type=\"application/json\" id=\"isekai-looks\">%s</script>\n", looksData)
 	p("<template id=\"isekai-hero-art\">%s</template>\n", hero)
-	for _, l := range looks {
-		p("<template data-look=\"%s\" data-name=\"%s\" data-desc=\"%s\"><style>%s</style>\n%s</template>\n",
-			html.EscapeString(l.ID), html.EscapeString(l.Name), html.EscapeString(l.Description),
-			strings.ReplaceAll(l.CSS, "</style", "<\\/style"), l.HTML)
-	}
 	p("<script>%s</script>\n</body>\n</html>\n", runtime)
 	_, err = io.WriteString(w, b.String())
 	return err

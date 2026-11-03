@@ -806,13 +806,16 @@ func TestStatsAndDashboard(t *testing.T) {
 	if m := regexp.MustCompile(`(?i)(src|href)\s*=\s*["']?https?:|url\(\s*["']?https?:|@import`).FindString(page); m != "" {
 		t.Errorf("page loads from the network: %q", m)
 	}
-	for _, want := range []string{`data-default-look="corporate"`, "default-src 'none'", `data-look="isekai"`, `data-look="corporate"`, `\u003c/script\u003e`} {
+	for _, want := range []string{`data-default-look="corporate"`, "default-src 'none'", `"id":"isekai"`, `"id":"corporate"`, `\u003c/script\u003e`, "form-action 'none'", "script-src 'sha256-"} {
 		if !strings.Contains(page, want) {
 			t.Errorf("page lacks %q", want)
 		}
 	}
 	if _, code := r.isekai("dashboard", "--look", "nope"); code == 0 {
 		t.Error("unknown look accepted")
+	}
+	if strings.Contains(page, "'unsafe-inline'; img") || strings.Contains(page, "script-src 'unsafe-inline'") {
+		t.Error("CSP allows inline scripts")
 	}
 	// A skin with a script is refused, the rest still renders.
 	r.write(".isekai/ui/skins/bad/index.html", "<div><script>alert(1)</script></div>")

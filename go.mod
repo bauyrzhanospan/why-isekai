@@ -5,6 +5,7 @@ go 1.22
 require (
 	filippo.io/age v1.2.1
 	github.com/BurntSushi/toml v1.4.0
+	golang.org/x/net v0.21.0
 )
 
 require (

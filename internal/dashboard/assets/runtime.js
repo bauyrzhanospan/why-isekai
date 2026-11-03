@@ -5,8 +5,12 @@
   'use strict';
   var DATA = JSON.parse(document.getElementById('isekai-data').textContent);
   var app = document.getElementById('app');
-  var looks = Array.prototype.map.call(document.querySelectorAll('template[data-look]'), function (t) {
-    return { id: t.getAttribute('data-look'), name: t.getAttribute('data-name'), desc: t.getAttribute('data-desc'), tpl: t };
+  // Skin markup was checked by isekai and is parsed into an inert <template>;
+  // the page CSP runs no script but this one, so event attributes cannot fire.
+  var looks = JSON.parse(document.getElementById('isekai-looks').textContent).map(function (l) {
+    var t = document.createElement('template');
+    t.innerHTML = l.html;
+    return { id: l.id, name: l.name, desc: l.desc, tpl: t };
   });
   var SAFE_ATTRS = { title: 1, 'aria-label': 1, alt: 1, 'aria-valuenow': 1 };
 

@@ -98,21 +98,21 @@ func CheckSkin(dir string, data []byte) ([]Problem, error) {
 	if total > MaxSkinBytes {
 		errf("skin is %d KB; the limit is %d KB", total/1024, MaxSkinBytes/1024)
 	}
-	h, err := os.ReadFile(filepath.Join(dir, "index.html"))
+	h, err := readRegular(filepath.Join(dir, "index.html"))
 	if errors.Is(err, fs.ErrNotExist) {
 		errf("index.html is missing")
 		return ps, nil
 	} else if err != nil {
 		return nil, err
 	}
-	c, _ := os.ReadFile(filepath.Join(dir, "skin.css"))
-	all := string(h) + "\n" + string(c)
+	c, _ := readRegular(filepath.Join(dir, "skin.css"))
+	var svgs []string
 	for _, svg := range listAssets(dir, ".svg") {
-		b, _ := os.ReadFile(svg)
-		all += "\n" + string(b)
+		b, _ := readRegular(svg)
+		svgs = append(svgs, string(b))
 	}
-	if bad := unsafeMarkup(all); bad != "" {
-		errf("%s is not allowed (no scripts, no event attributes, no network)", bad)
+	if bad := unsafeSkin(string(h), string(c), svgs); bad != "" {
+		errf("%s is not allowed (no scripts, no event attributes, no forms or redirects, no network)", bad)
 	}
 	for _, s := range requiredSlots {
 		if !regexp.MustCompile(s.re).MatchString(string(h)) {
@@ -187,7 +187,7 @@ func allowedAsset(p string) bool { _, ok := assetExts[strings.ToLower(filepath.E
 func listAssets(dir, ext string) []string {
 	var out []string
 	filepath.WalkDir(filepath.Join(dir, "assets"), func(p string, d fs.DirEntry, err error) error {
-		if err == nil && !d.IsDir() && (ext == "" || strings.EqualFold(filepath.Ext(p), ext)) {
+		if err == nil && d.Type().IsRegular() && (ext == "" || strings.EqualFold(filepath.Ext(p), ext)) {
 			out = append(out, p)
 		}
 		return nil
@@ -203,7 +203,7 @@ func inlineAssets(dir, s string) string {
 		if !allowedAsset(p) {
 			continue
 		}
-		data, err := os.ReadFile(p)
+		data, err := readRegular(p)
 		if err != nil {
 			continue
 		}
