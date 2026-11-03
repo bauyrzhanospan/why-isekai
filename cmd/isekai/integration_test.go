@@ -637,3 +637,37 @@ func TestRunDoesNotWaitForBackgroundChild(t *testing.T) {
 		t.Fatalf("code %d after %v:\n%s", code, time.Since(start), out)
 	}
 }
+
+func TestWarmBriefWithoutTrailers(t *testing.T) {
+	r := newRepo(t, true)
+	git := func(msg string, files map[string]string) {
+		for f, c := range files {
+			r.write(f, c)
+		}
+		r.git("add", "-A")
+		r.git("commit", "-q", "--no-verify", "-m", msg)
+	}
+	git("add parser", map[string]string{"pkg/parse/parse.go": "package parse\n// TODO: handle CRLF input\n"})
+	git("tweak parser", map[string]string{"pkg/parse/parse.go": "package parse\n// TODO: handle CRLF input\nvar x = 1\n"})
+	git("add cache\n\nCo-Authored-By: Claude <noreply@anthropic.com>", map[string]string{"pkg/cache/c.go": "package cache\n// FIXME: unbounded growth\n"})
+	git("remove cache fixme", map[string]string{"pkg/cache/c.go": "package cache\n"})
+	git("try faster hashing", map[string]string{"pkg/parse/hash.go": "package parse\n"})
+	r.git("revert", "--no-edit", "HEAD")
+	out, code := r.isekai("brief")
+	if code != 0 {
+		t.Fatal(out)
+	}
+	for _, want := range []string{
+		"Recent commits without Why", "tweak parser",
+		"reverted: try faster hashing (inferred)",
+		"handle CRLF input [pkg/parse/parse.go",
+		"pkg/parse/ ", "Claude: 1 commits",
+	} {
+		if !strings.Contains(out, want) {
+			t.Errorf("brief lacks %q:\n%s", want, out)
+		}
+	}
+	if strings.Contains(out, "unbounded growth") {
+		t.Errorf("a removed FIXME is still listed:\n%s", out)
+	}
+}

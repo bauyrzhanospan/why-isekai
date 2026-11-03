@@ -23,8 +23,9 @@ type Decision struct {
 
 // DeadEnd is a Tried trailer.
 type DeadEnd struct {
-	Commit string `json:"commit"`
-	Tried  string `json:"tried"`
+	Commit   string `json:"commit"`
+	Tried    string `json:"tried"`
+	Inferred bool   `json:"inferred,omitempty"` // from a revert, not a Tried trailer
 }
 
 // OpenItem is a Next not yet closed by Done.
@@ -54,6 +55,12 @@ type Brief struct {
 	Wiki       []WikiPage `json:"wiki,omitempty"`
 	Secrets    []string   `json:"secrets,omitempty"`
 	Untracked  int        `json:"commits_without_why"`
+
+	// Inferred from plain git history (useful before anyone writes trailers).
+	RecentNoWhy []CommitLine `json:"recent_without_why,omitempty"`
+	HotSpots    []HotSpot    `json:"hot_spots,omitempty"`
+	Agents      []AgentCount `json:"agents,omitempty"`
+	Todos       []Todo       `json:"inferred_todos,omitempty"`
 }
 
 var doneRefRe = regexp.MustCompile(`^([0-9a-fA-F]{4,40})#([0-9]+)$`)
@@ -98,6 +105,12 @@ func BuildBrief(dir string, cfg config.Config, n int, now time.Time) (Brief, err
 			b.DeadEnds = append(b.DeadEnds, DeadEnd{Commit: c.Short, Tried: t})
 		}
 	}
+
+	window := commits
+	if len(window) > n {
+		window = window[:n]
+	}
+	b.warm(dir, window, cfg)
 
 	// Open items: replay the scanned history oldest first.
 	var open []OpenItem
@@ -196,14 +209,24 @@ func (b Brief) render(w io.Writer, head func(string) string) error {
 		p("- %s %s — why: %s%s\n", d.Commit, d.Subject, d.Why, agent)
 	}
 	if b.Untracked > 0 {
-		p("- (%d of the last %d commits have no Why)\n", b.Untracked, b.Window)
+		p("- (%d of the last %d commits have no Why; their subjects are below)\n", b.Untracked, b.Window)
+	}
+	if len(b.RecentNoWhy) > 0 {
+		p("\n%s\n", head("Recent commits without Why"))
+		for _, c := range b.RecentNoWhy {
+			p("- %s %s\n", c.Commit, c.Subject)
+		}
 	}
 	p("\n%s\n", head("Dead ends (Tried)"))
 	if len(b.DeadEnds) == 0 {
 		p("- none recorded\n")
 	}
 	for _, d := range b.DeadEnds {
-		p("- %s %s\n", d.Commit, d.Tried)
+		inf := ""
+		if d.Inferred {
+			inf = " (inferred)"
+		}
+		p("- %s %s%s\n", d.Commit, d.Tried, inf)
 	}
 	p("\n%s\n", head("Open (Next without Done; close with `Done: <exact text>`)"))
 	if len(b.Open) == 0 {
@@ -215,6 +238,24 @@ func (b Brief) render(w io.Writer, head func(string) string) error {
 			stale = fmt.Sprintf(" (possibly stale: %d days)", o.AgeDays)
 		}
 		p("- %s [%s %s]%s\n", o.Text, o.Commit, o.Date, stale)
+	}
+	if len(b.Todos) > 0 {
+		p("\n%s\n", head("TODO/FIXME added recently and still in the code (inferred)"))
+		for _, t := range b.Todos {
+			p("- %s [%s %s]\n", t.Text, t.File, t.Commit)
+		}
+	}
+	if len(b.HotSpots) > 0 {
+		p("\n%s\n", head(fmt.Sprintf("Hot spots (directories touched most in the last %d commits)", b.Window)))
+		for _, h := range b.HotSpots {
+			p("- %s %d commits\n", h.Path, h.Commits)
+		}
+	}
+	if len(b.Agents) > 0 {
+		p("\n%s\n", head("Agents in this window"))
+		for _, a := range b.Agents {
+			p("- %s: %d commits\n", a.Agent, a.Commits)
+		}
 	}
 	if len(b.Wiki) > 0 {
 		p("\n%s\n", head("Wiki (.isekai/wiki; open pages as needed)"))

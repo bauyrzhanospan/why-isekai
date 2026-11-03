@@ -2,8 +2,8 @@ package journal
 
 import (
 	"fmt"
-	"regexp"
 	"os"
+	"regexp"
 	"strings"
 	"unicode"
 
