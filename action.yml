@@ -26,7 +26,7 @@ inputs:
     required: false
     default: "true"
   sync-issues:
-    description: On pushes, mirror open work into GitHub issues when .isekai/config.toml has [issues] enabled = true. Needs `permissions: issues: write`.
+    description: "On pushes, mirror open work into GitHub issues when .isekai/config.toml has [issues] enabled = true. Needs `permissions: issues: write`."
     required: false
     default: "true"
 outputs:
