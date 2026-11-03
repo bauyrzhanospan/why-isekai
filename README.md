@@ -123,15 +123,19 @@ With `npm i -D why-isekai`, use `npx isekai` in the husky files.
 
 ```yaml
 # .github/workflows/journal.yml
-on: pull_request
+on: [push, pull_request]
 jobs:
   journal:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with: { fetch-depth: 0 }
-      - run: go run github.com/bauyrzhanospan/why-isekai/cmd/isekai@latest check "origin/${{ github.base_ref }}..HEAD"
+      - uses: bauyrzhanospan/why-isekai@v0
+        with:
+          strict: "false"   # true: hold human commits to the same rules
 ```
+
+The action downloads the release binary (no Go needed), checks the pull request's commits (or the pushed ones), fails when an agent commit breaks the spec in `block` mode, and writes a table of commits without a reason to the job summary. Inputs: `range`, `strict`, `mode`, `version` (`latest`, a version, or `source`), `summary`.
 
 `isekai check [<range>]` exits non-zero when an agent commit breaks the spec in `block` mode. Add `--strict` to hold human commits to the same rules, and `--format json` for machine-readable output. Without a range it checks `@{upstream}..HEAD`, or `HEAD` if there is no upstream. CI cannot see the agent's environment, so it recognises agent commits by their trailers.
 

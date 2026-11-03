@@ -126,7 +126,7 @@ func cmdCheck(args []string, out io.Writer) (int, error) {
 	format := fs.String("format", "text", "text or json")
 	pos, err := parseInterspersed(fs, args)
 	if err != nil {
-		return 2, fmt.Errorf("check: %v (usage: isekai check [<range>] [--strict] [--format text|json])", err)
+		return 2, fmt.Errorf("check: %v (usage: isekai check [<range>] [--strict] [--format text|json|md])", err)
 	}
 	root, err := repoRoot()
 	if err != nil {
@@ -179,6 +179,8 @@ func cmdCheck(args []string, out io.Writer) (int, error) {
 		if err := enc.Encode(map[string]any{"mode": cfg.Log.Mode, "checked": len(results), "failed": failed, "commits": results}); err != nil {
 			return 2, err
 		}
+	} else if *format == "md" {
+		writeCheckMarkdown(out, results, failed, string(cfg.Log.Mode), *strict)
 	} else {
 		problems := 0
 		for _, r := range results {
@@ -342,4 +344,48 @@ func agentName() string {
 		return config.AgentName(k, v)
 	}
 	return ""
+}
+
+// writeCheckMarkdown renders check results for a CI job summary.
+func writeCheckMarkdown(out io.Writer, results []checkedCommit, failed int, mode string, strict bool) {
+	problems := 0
+	for _, r := range results {
+		if len(r.Issues) > 0 {
+			problems++
+		}
+	}
+	icon := "✅"
+	if failed > 0 {
+		icon = "❌"
+	} else if problems > 0 {
+		icon = "⚠️"
+	}
+	fmt.Fprintf(out, "### %s isekai check\n\n", icon)
+	fmt.Fprintf(out, "%d commits checked, %d with problems, %d failing (mode `%s`%s).\n\n", len(results), problems, failed, mode, map[bool]string{true: ", strict", false: ""}[strict])
+	if problems == 0 {
+		fmt.Fprintln(out, "Every commit explains why.")
+		return
+	}
+	fmt.Fprintln(out, "| Commit | Subject | Author | Problem |")
+	fmt.Fprintln(out, "|---|---|---|---|")
+	esc := func(s string) string {
+		s = strings.ReplaceAll(s, "|", "\\|")
+		s = strings.ReplaceAll(s, "<", "&lt;")
+		return strings.ReplaceAll(s, "\n", " ")
+	}
+	for _, r := range results {
+		if len(r.Issues) == 0 {
+			continue
+		}
+		who := "human"
+		if r.Agent {
+			who = "agent"
+		}
+		var texts []string
+		for _, i := range r.Issues {
+			texts = append(texts, "`"+i.Code+"` "+esc(i.Text))
+		}
+		fmt.Fprintf(out, "| `%s` | %s | %s | %s |\n", r.Commit, esc(r.Subject), who, strings.Join(texts, "<br>"))
+	}
+	fmt.Fprintf(out, "\nEach commit should end with a `Why:` trailer. Example:\n\n```\n%s\n```\n", journal.Example)
 }

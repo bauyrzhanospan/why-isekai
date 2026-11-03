@@ -37,7 +37,8 @@ jobs:
           node packaging/npm/build.mjs --self-test
           python3 packaging/pypi/build_wheels.py --self-test
 
-  # Eat our own dog food: every commit in a PR must follow the spec.
+  # Eat our own dog food: every commit in a PR must follow the spec,
+  # checked by this repository's own GitHub Action built from source.
   journal:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
@@ -48,4 +49,7 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
-      - run: go run ./cmd/isekai check --strict "origin/${{ github.base_ref }}..HEAD"
+      - uses: ./
+        with:
+          version: source
+          strict: "true"

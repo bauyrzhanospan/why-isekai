@@ -1,0 +1,54 @@
+name: why-isekai check
+description: Check that every commit explains why (Why/Tried/Next/Done/Agent trailers) and summarise the result.
+author: bauyrzhanospan
+branding:
+  icon: book-open
+  color: purple
+inputs:
+  range:
+    description: Revision range to check. Default — pull requests base..head, pushes before..after.
+    required: false
+    default: ""
+  strict:
+    description: Hold human commits to the same rules as agent commits.
+    required: false
+    default: "false"
+  mode:
+    description: Override .isekai/config.toml log.mode (warn or block). Only agent commits fail in block mode.
+    required: false
+    default: ""
+  version:
+    description: isekai release to use (e.g. 0.1.0), "latest", or "source" to build this action's own code with Go.
+    required: false
+    default: latest
+  summary:
+    description: Write the result to the job summary.
+    required: false
+    default: "true"
+outputs:
+  failed:
+    description: Number of failing commits.
+    value: ${{ steps.check.outputs.failed }}
+runs:
+  using: composite
+  steps:
+    - name: Install isekai
+      shell: bash
+      env:
+        ISEKAI_VERSION_INPUT: ${{ inputs.version }}
+        ACTION_PATH: ${{ github.action_path }}
+      run: bash "$ACTION_PATH/.github/action/install.sh"
+    - name: Check commits
+      id: check
+      shell: bash
+      env:
+        INPUT_RANGE: ${{ inputs.range }}
+        INPUT_STRICT: ${{ inputs.strict }}
+        INPUT_MODE: ${{ inputs.mode }}
+        INPUT_SUMMARY: ${{ inputs.summary }}
+        EVENT_NAME: ${{ github.event_name }}
+        BASE_REF: ${{ github.base_ref }}
+        BEFORE: ${{ github.event.before }}
+        AFTER: ${{ github.sha }}
+        ACTION_PATH: ${{ github.action_path }}
+      run: bash "$ACTION_PATH/.github/action/check.sh"
