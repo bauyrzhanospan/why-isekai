@@ -3,12 +3,32 @@ name: release
 on:
   push:
     tags: ["v*"]
+  # Publish an existing release to npm or PyPI later (for example after the
+  # registry account is set up), without rebuilding it: Actions → release →
+  # Run workflow.
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag to publish, e.g. v0.1.0
+        required: true
+      npm:
+        description: Publish to npm
+        type: boolean
+        default: true
+      pypi:
+        description: Publish to PyPI
+        type: boolean
+        default: false
 
 permissions:
   contents: write
 
+env:
+  TAG: ${{ inputs.tag || github.ref_name }}
+
 jobs:
   goreleaser:
+    if: ${{ github.event_name == 'push' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -33,15 +53,33 @@ jobs:
             dist/*.zip
             dist/checksums.txt
 
-  npm:
-    needs: goreleaser
+  # On a manual run: take the archives from the existing release.
+  assets:
+    if: ${{ github.event_name == 'workflow_dispatch' }}
     runs-on: ubuntu-latest
-    if: ${{ vars.PUBLISH_NPM == 'true' }}
+    steps:
+      - run: |
+          mkdir dist
+          gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --dir dist --pattern '*.tar.gz' --pattern '*.zip' --pattern checksums.txt
+          (cd dist && sha256sum -c checksums.txt)
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist
+
+  npm:
+    needs: [goreleaser, assets]
+    runs-on: ubuntu-latest
+    if: ${{ always() && (needs.goreleaser.result == 'success' || needs.assets.result == 'success') && (github.event_name == 'push' && vars.PUBLISH_NPM == 'true' || github.event_name == 'workflow_dispatch' && inputs.npm) }}
     permissions:
       contents: read
       id-token: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TAG }}
       - uses: actions/download-artifact@v4
         with:
           name: dist
@@ -50,26 +88,28 @@ jobs:
         with:
           node-version: 22
           registry-url: https://registry.npmjs.org
-      - run: node packaging/npm/build.mjs --version "${GITHUB_REF_NAME#v}" --dist dist --out packaging/npm/out
+      - run: node packaging/npm/build.mjs --version "${TAG#v}" --dist dist --out packaging/npm/out
       - run: node packaging/npm/build.mjs --publish --out packaging/npm/out
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
   pypi:
-    needs: goreleaser
+    needs: [goreleaser, assets]
     runs-on: ubuntu-latest
-    if: ${{ vars.PUBLISH_PYPI == 'true' }}
+    if: ${{ always() && (needs.goreleaser.result == 'success' || needs.assets.result == 'success') && (github.event_name == 'push' && vars.PUBLISH_PYPI == 'true' || github.event_name == 'workflow_dispatch' && inputs.pypi) }}
     environment: pypi
     permissions:
       contents: read
       id-token: write # PyPI trusted publishing, no token needed
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TAG }}
       - uses: actions/download-artifact@v4
         with:
           name: dist
           path: dist
-      - run: python3 packaging/pypi/build_wheels.py --version "${GITHUB_REF_NAME#v}" --dist dist --out packaging/pypi/out
+      - run: python3 packaging/pypi/build_wheels.py --version "${TAG#v}" --dist dist --out packaging/pypi/out
       - uses: pypa/gh-action-pypi-publish@release/v1
         with:
           packages-dir: packaging/pypi/out
