@@ -12,7 +12,7 @@ func TestRuntimeRemembersOnlyPickedLooks(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	js := string(b)
+	js := strings.ReplaceAll(string(b), "\r\n", "\n") // Windows checkouts
 	start := strings.Index(js, "function render(")
 	if start < 0 {
 		t.Fatal("runtime has no render function")
