@@ -967,3 +967,34 @@ func TestSkins(t *testing.T) {
 		t.Fatalf("list:\n%s", out)
 	}
 }
+
+// Merges are found by parent count, renames count once, and non-ASCII
+// paths are read as UTF-8 (review findings).
+func TestStatsMergesRenamesAndPaths(t *testing.T) {
+	r := newRepo(t, true)
+	r.mustInit()
+	r.write("src/a.txt", "one\n")
+	r.commit("feat: a\n\nWhy: seed a file to rename later")
+	r.git("mv", "src/a.txt", "src/b.txt")
+	r.commit("Merge settings into one file\n\nWhy: a normal commit whose title starts with Merge")
+	r.write("доки/план.md", "TODO: перевести раздел\n")
+	r.commit("docs: plan\n\nWhy: a path that git would quote")
+	out, code := r.isekai("stats", "--format", "json")
+	if code != 0 {
+		t.Fatal(out)
+	}
+	var s struct {
+		Journal struct{ Commits int } `json:"journal"`
+		Growth  struct{ Files int }   `json:"growth"`
+	}
+	if err := json.Unmarshal([]byte(out), &s); err != nil {
+		t.Fatal(err, out)
+	}
+	if s.Journal.Commits != 3 {
+		t.Errorf("commit titled Merge was dropped: %d commits\n%s", s.Journal.Commits, out)
+	}
+	brief, _ := r.isekai("brief")
+	if !strings.Contains(brief, "доки/план.md") {
+		t.Errorf("non-ASCII path missing or quoted in the brief:\n%s", brief)
+	}
+}

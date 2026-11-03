@@ -226,7 +226,7 @@ func Build(root string, cfg config.Config, now time.Time) (Stats, error) {
 	j := &s.Journal
 	for _, c := range commits {
 		m := journal.Parse(c.Message)
-		if strings.HasPrefix(m.Subject, "Merge ") {
+		if c.IsMerge() {
 			continue
 		}
 		j.Commits++
@@ -277,8 +277,8 @@ func Build(root string, cfg config.Config, now time.Time) (Stats, error) {
 	tracker.ApplyCache(root, &b)
 	j.OpenCount = len(b.Open)
 	j.Closed = b.Closed
-	if b.Closed > 0 {
-		avg := math.Round(b.CloseDays/float64(b.Closed)*10) / 10
+	if b.CloseTimed > 0 {
+		avg := math.Round(b.CloseDays/float64(b.CloseTimed)*10) / 10
 		j.AvgCloseDays = &avg
 	}
 	for _, o := range b.Open {
@@ -364,7 +364,9 @@ func sortAgents(a []Agent) {
 }
 
 func numstat(root string, n int) (files, added int) {
-	out, err := gitx.RunRaw(root, nil, "log", "-n", strconv.Itoa(n), "--no-merges", "--numstat", "--format=")
+	// Same window as the commit count (merges print no numstat), and renames
+	// as a delete plus an add, so "{a => b}" is not counted as a third path.
+	out, err := gitx.RunRaw(root, nil, "log", "-n", strconv.Itoa(n), "--no-renames", "--numstat", "--format=")
 	if err != nil {
 		return 0, 0
 	}

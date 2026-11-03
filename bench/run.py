@@ -25,8 +25,10 @@ import importlib.util
 import json
 import os
 import re
+import random
 import shlex
 import shutil
+import signal
 import subprocess
 import sys
 import tempfile
@@ -135,6 +137,51 @@ def dead_end_hit(task, text):
     return any(re.search(re.escape(p), text, re.I) for p in task.get("dead_end_patterns", []))
 
 
+def agent_actions(output):
+    """What the agent itself wrote and did: its text and tool-call inputs.
+
+    Tool results are left out on purpose. In the journal arm the brief and
+    git log show the Tried: text, so matching the whole transcript would
+    flag an agent for reading about the dead end rather than walking into
+    it. Agents whose output is not Claude Code stream-json give "" here and
+    are judged by their diff alone.
+    """
+    parts = []
+    for line in output.splitlines():
+        line = line.strip()
+        if not line.startswith("{"):
+            continue
+        try:
+            o = json.loads(line)
+        except ValueError:
+            continue
+        if o.get("type") != "assistant":
+            continue
+        for c in (o.get("message") or {}).get("content") or []:
+            if c.get("type") == "text":
+                parts.append(c.get("text") or "")
+            elif c.get("type") == "tool_use":
+                parts.append(json.dumps(c.get("input") or {}))
+    return "\n".join(parts)
+
+
+def run_shell(cmd, cwd, env, timeout):
+    """Run the agent command in its own process group, so a timeout stops
+    the whole pipeline and not only the shell. Returns (output, timed_out)."""
+    p = subprocess.Popen(cmd, cwd=cwd, env=env, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, start_new_session=True)
+    try:
+        out, err = p.communicate(timeout=timeout)
+        timed_out = False
+    except subprocess.TimeoutExpired:
+        try:
+            os.killpg(p.pid, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
+        out, err = p.communicate()
+        timed_out = True
+    return (out or b"").decode("utf-8", "replace") + "\n" + (err or b"").decode("utf-8", "replace"), timed_out
+
+
 def usage_from(output):
     """Best-effort token and turn counts from Claude Code JSON or stream-json output."""
     tokens = turns = cost = None
@@ -158,18 +205,15 @@ def run_agent(task, arm, agent, env, timeout):
     repo = make_repo(task, arm, env)
     cmd = agent.replace("{prompt}", shlex.quote(task["prompt"]))
     t0 = time.time()
-    try:
-        r = subprocess.run(cmd, cwd=repo, env=env, shell=True, capture_output=True, text=True, timeout=timeout)
-        out = r.stdout + "\n" + r.stderr
-    except subprocess.TimeoutExpired as e:
-        out = (e.stdout or "") if isinstance(e.stdout, str) else ""
+    out, timed_out = run_shell(cmd, repo, env, timeout)
     wall = round(time.time() - t0, 1)
     base = open(os.path.join(repo, ".git", "bench-base")).read().strip()
     diff = sh(["git", "diff", base], repo, env, check=False).stdout + sh(["git", "status", "--porcelain"], repo, env, check=False).stdout
     tokens, turns, cost = usage_from(out)
     res = {
         "task": task["id"], "arm": arm, "success": check(task, repo, env),
-        "dead_end": dead_end_hit(task, out + "\n" + diff),
+        "dead_end": dead_end_hit(task, agent_actions(out) + "\n" + diff),
+        "timed_out": timed_out,
         "tokens": tokens, "turns": turns, "cost_usd": cost, "wall_s": wall,
     }
     shutil.rmtree(repo, ignore_errors=True)
@@ -193,13 +237,14 @@ def self_test(ts, env):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--agent", help="agent command; {prompt} is replaced by the quoted task prompt")
+    ap.add_argument("--agent", help="agent command; {prompt} is replaced by the shell-quoted task prompt, so write it bare, never inside quotes")
     ap.add_argument("--runs", type=int, default=3)
     ap.add_argument("--tasks", nargs="*", help="task ids (default: all)")
     ap.add_argument("--arms", nargs="*", default=["plain", "journal"])
     ap.add_argument("--timeout", type=int, default=900)
     ap.add_argument("--out", default=os.path.join(HERE, "results.jsonl"))
     ap.add_argument("--self-test", action="store_true")
+    ap.add_argument("--seed", type=int, help="seed for the arm order (default: random)")
     a = ap.parse_args()
     env = bench_env(build_isekai())
     ts = tasks(a.tasks)
@@ -208,10 +253,17 @@ def main():
         return
     if not a.agent:
         ap.error("--agent is required (or --self-test); running agents costs tokens")
+    if "'{prompt}'" in a.agent or '"{prompt}"' in a.agent:
+        ap.error("write {prompt} without quotes: it is already shell-quoted")
+    rng = random.Random(a.seed)
     with open(a.out, "a") as f:
         for i in range(a.runs):
             for t in ts:
-                for arm in a.arms:
+                # Arms run in random order, so prompt caching does not always
+                # favour the second one.
+                arms = list(a.arms)
+                rng.shuffle(arms)
+                for arm in arms:
                     res = run_agent(t, arm, a.agent, env, a.timeout)
                     res["run"] = i + 1
                     f.write(json.dumps(res) + "\n")

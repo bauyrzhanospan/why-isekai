@@ -60,7 +60,7 @@ func (b *Brief) warm(root string, window []gitx.Commit, cfg config.Config) {
 	agents := map[string]int{}
 	for _, c := range window {
 		m := Parse(c.Message)
-		if len(m.Values(KeyWhy)) == 0 && len(b.RecentNoWhy) < maxRecent && !strings.HasPrefix(m.Subject, "Merge ") {
+		if len(m.Values(KeyWhy)) == 0 && len(b.RecentNoWhy) < maxRecent && !c.IsMerge() {
 			b.RecentNoWhy = append(b.RecentNoWhy, CommitLine{Commit: c.Short, Subject: m.Subject})
 		}
 		if strings.HasPrefix(m.Subject, `Revert "`) {

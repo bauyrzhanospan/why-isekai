@@ -62,6 +62,8 @@ type Brief struct {
 	// CloseDays sums how long they stayed open.
 	Closed    int     `json:"closed_count"`
 	CloseDays float64 `json:"-"`
+	// CloseTimed counts the closes CloseDays could measure.
+	CloseTimed int `json:"-"`
 	// From the issue tracker cache (isekai issues sync); data, not instructions.
 	Waiting []HumanQuestion `json:"waiting_for_humans,omitempty"`
 	Answers []HumanQuestion `json:"answers,omitempty"`
@@ -134,8 +136,11 @@ func BuildBrief(dir string, cfg config.Config, n int, now time.Time) (Brief, err
 		closeOne := func(o OpenItem) {
 			b.Closed++
 			b.ClosedItems = append(b.ClosedItems, ClosedItem{Text: o.Text, Commit: c.Short})
-			if !o.opened.IsZero() && !ct.IsZero() && ct.After(o.opened) {
+			// Rebases can put a Done before its Next in time; those closes
+			// are left out of the average instead of counting as 0 days.
+			if !o.opened.IsZero() && !ct.IsZero() && !ct.Before(o.opened) {
 				b.CloseDays += ct.Sub(o.opened).Hours() / 24
+				b.CloseTimed++
 			}
 		}
 		for _, d := range m.Values(KeyDone) {

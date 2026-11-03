@@ -17,7 +17,9 @@ func Run(dir string, args ...string) (string, error) {
 
 // RunRaw executes git with optional stdin and returns stdout untrimmed.
 func RunRaw(dir string, stdin []byte, args ...string) (string, error) {
-	cmd := exec.Command("git", args...)
+	// Paths come back as plain UTF-8, not "\321\200"-quoted, whatever the
+	// user's core.quotePath is.
+	cmd := exec.Command("git", append([]string{"-c", "core.quotePath=false"}, args...)...)
 	cmd.Dir = dir
 	if stdin != nil {
 		cmd.Stdin = bytes.NewReader(stdin)
@@ -65,7 +67,11 @@ type Commit struct {
 	Time    string // ISO 8601 committer date
 	Author  string
 	Message string // full raw message
+	Parents int    // number of parents; more than one is a merge
 }
+
+// IsMerge reports whether the commit has more than one parent.
+func (c Commit) IsMerge() bool { return c.Parents > 1 }
 
 const (
 	fieldSep  = "\x1f"
@@ -78,7 +84,7 @@ func Log(dir string, args ...string) ([]Commit, error) {
 	if _, err := Run(dir, "rev-parse", "--verify", "-q", "HEAD"); err != nil {
 		return nil, nil
 	}
-	a := append([]string{"log", "--format=%H" + fieldSep + "%h" + fieldSep + "%cI" + fieldSep + "%an" + fieldSep + "%B" + recordSep}, args...)
+	a := append([]string{"log", "--format=%H" + fieldSep + "%h" + fieldSep + "%cI" + fieldSep + "%an" + fieldSep + "%P" + fieldSep + "%B" + recordSep}, args...)
 	out, err := RunRaw(dir, nil, a...)
 	if err != nil {
 		return nil, err
@@ -89,11 +95,11 @@ func Log(dir string, args ...string) ([]Commit, error) {
 		if rec == "" {
 			continue
 		}
-		f := strings.SplitN(rec, fieldSep, 5)
-		if len(f) != 5 {
+		f := strings.SplitN(rec, fieldSep, 6)
+		if len(f) != 6 {
 			continue
 		}
-		cs = append(cs, Commit{Hash: f[0], Short: f[1], Time: f[2], Author: f[3], Message: f[4]})
+		cs = append(cs, Commit{Hash: f[0], Short: f[1], Time: f[2], Author: f[3], Parents: len(strings.Fields(f[4])), Message: f[5]})
 	}
 	return cs, nil
 }
